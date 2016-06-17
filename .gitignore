@@ -28,3 +28,5 @@
 *.out
 *.app
 /Saber/*.user
+/QtFlex5/*.user
+/*.user
