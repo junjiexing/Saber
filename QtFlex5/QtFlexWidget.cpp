@@ -1447,7 +1447,7 @@ bool FlexWidget::restore(const QByteArray& snapshot, const QString& identifer)
             }
             if (dockWidgetPath[1] == "_flex_sideContainer")
             {
-                QSplitter* parSplitter = impl->_siteContainer;
+                //QSplitter* parSplitter = impl->_siteContainer;
 
                 QJsonArray objects = flexWidgetObject["dockSides"].toArray();
 
