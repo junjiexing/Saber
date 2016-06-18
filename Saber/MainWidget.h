@@ -23,11 +23,12 @@ public:
 
     DockWidget* findDockWidget(const QString& name);
 private:
-    DockWidget* addDockWidget(Flex::ViewMode mode, const QString& name, Flex::DockArea area, int siteIndex, FlexWidget* parent, QWidget *content);
-    DockWidget* activeOrAddDockWidget(Flex::ViewMode mode, const QString& name, Flex::DockArea area, int siteIndex, FlexWidget* parent, QWidget *content);
+    DockWidget* addDockWidget(Flex::ViewMode mode, const QString& name, Flex::DockArea area, int siteIndex, FlexWidget* parent);
+    DockWidget* activeOrAddDockWidget(Flex::ViewMode mode, const QString& name, Flex::DockArea area, int siteIndex, FlexWidget* parent);
     void saveLayout();
     void loadLayout();
 
+    void onDockEidgetCreated(DockWidget* widget);
 
 private:
     std::map<std::string,QAction*> m_actions;

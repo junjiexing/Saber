@@ -12,6 +12,8 @@ MainWidget::MainWidget(QWidget *parent)
     setObjectName("MainWindow");
     qApp->setProperty("window", QVariant::fromValue<QObject*>(this));
 
+    connect(FlexManager::instance(), &FlexManager::dockWidgetCreated, this, &MainWidget::onDockEidgetCreated);
+
     center = FlexManager::instance()->createFlexWidget(Flex::HybridView, this, Flex::widgetFlags(), "RootFlex");
     setCentralWidget(center);
 
@@ -30,11 +32,11 @@ MainWidget::MainWidget(QWidget *parent)
     addAction("view.disasmView", menu->addAction("反汇编窗口", this, [this]
     {
         static int index = 0;
-        addDockWidget(Flex::FileView,QString("反汇编-").append(++index),Flex::M,0,center, new QTextEdit);
+        addDockWidget(Flex::FileView,QString("反汇编-%1").arg(++index),Flex::M,0,center);
     }));
-    addAction("view.memoryView", menu->addAction("内存窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"内存",Flex::B0,0,center, new QTextEdit);}));
-    addAction("view.registerView", menu->addAction("寄存器编窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"寄存器",Flex::B0,0,center, new QTextEdit);}));
-    addAction("view.callstackView", menu->addAction("调用堆栈窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"调用堆栈",Flex::B0,0,center, new QTextEdit);}));
+    addAction("view.memoryView", menu->addAction("内存窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"内存",Flex::B0,0,center);}));
+    addAction("view.registerView", menu->addAction("寄存器编窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"寄存器",Flex::B0,0,center);}));
+    addAction("view.callstackView", menu->addAction("调用堆栈窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"调用堆栈",Flex::B0,0,center);}));
     addAction("view.watchView", menu->addAction("监视窗口", this, []{}));
     addAction("view.breakpointView", menu->addAction("断点窗口", this, []{}));
     addAction("view.outputView", menu->addAction("输出编窗口", this, []{}));
@@ -140,12 +142,11 @@ DockWidget *MainWidget::findDockWidget(const QString& name)
 
 DockWidget *MainWidget::addDockWidget(Flex::ViewMode mode,
     const QString& name, Flex::DockArea area, int siteIndex,
-    FlexWidget* parent, QWidget* content)
+    FlexWidget* parent)
 {
     DockWidget* dockWidget = FlexManager::instance()->createDockWidget(mode, parent, Flex::widgetFlags(), name);
     dockWidget->setViewMode(mode);
     dockWidget->setWindowTitle(name);
-    dockWidget->attachWidget(content);
 
     if (parent)
     {
@@ -154,7 +155,9 @@ DockWidget *MainWidget::addDockWidget(Flex::ViewMode mode,
     return dockWidget;
 }
 
-DockWidget *MainWidget::activeOrAddDockWidget(Flex::ViewMode mode, const QString& name, Flex::DockArea area, int siteIndex, FlexWidget* parent, QWidget* content)
+DockWidget *MainWidget::activeOrAddDockWidget(
+        Flex::ViewMode mode, const QString& name,
+        Flex::DockArea area, int siteIndex, FlexWidget* parent)
 {
     auto widget = findDockWidget(name);
     if (widget)
@@ -163,7 +166,7 @@ DockWidget *MainWidget::activeOrAddDockWidget(Flex::ViewMode mode, const QString
         return widget;
     }
 
-    return addDockWidget(mode, name, area, siteIndex, parent, content);
+    return addDockWidget(mode, name, area, siteIndex, parent);
 }
 
 void MainWidget::saveLayout()
@@ -187,4 +190,9 @@ void MainWidget::loadLayout()
     parents[objectName()] = this;
 
     FlexManager::instance()->load(content,parents);
+}
+
+void MainWidget::onDockEidgetCreated(DockWidget *widget)
+{
+    widget->attachWidget(new QTextEdit(widget->windowTitle()));
 }
