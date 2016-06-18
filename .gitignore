@@ -30,3 +30,4 @@
 /Saber/*.user
 /QtFlex5/*.user
 /*.user
+.DS_Store
