@@ -5,6 +5,8 @@
 #include <QtFlexWidget.h>
 #include <QtFlexManager.h>
 
+#include "DebugCore.h"
+
 
 MainWidget::MainWidget(QWidget *parent)
     : QMainWindow(parent)
@@ -17,9 +19,15 @@ MainWidget::MainWidget(QWidget *parent)
     center = FlexManager::instance()->createFlexWidget(Flex::HybridView, this, Flex::widgetFlags(), "RootFlex");
     setCentralWidget(center);
 
+    //初始化model
+    m_memoryMapModel = new QStandardItemModel(0, 3, this);
+    QStringList header;
+    header<<"起始地址"<<"大小"<<"权限";
+    m_memoryMapModel->setHorizontalHeaderLabels(header);
+
     //创建菜单
     auto menu = new QMenu("文件",this);
-    addAction("file.open", menu->addAction("打开", this, []{}));
+    addAction("file.open", menu->addAction("打开", this, [this]{onFileOpen();}));
     addAction("file.close", menu->addAction("关闭", this, []{}));
     addAction("file.exit", menu->addAction("退出", this, []{}));
     menuBar()->addMenu(menu);
@@ -37,6 +45,7 @@ MainWidget::MainWidget(QWidget *parent)
     addAction("view.memoryView", menu->addAction("内存窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"内存",Flex::B0,0,center);}));
     addAction("view.registerView", menu->addAction("寄存器编窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"寄存器",Flex::B0,0,center);}));
     addAction("view.callstackView", menu->addAction("调用堆栈窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"调用堆栈",Flex::B0,0,center);}));
+    addAction("view.memoryMapView", menu->addAction("内存映射窗口窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"内存映射",Flex::B0,0,center);}));
     addAction("view.watchView", menu->addAction("监视窗口", this, []{}));
     addAction("view.breakpointView", menu->addAction("断点窗口", this, []{}));
     addAction("view.outputView", menu->addAction("输出编窗口", this, []{}));
@@ -194,5 +203,70 @@ void MainWidget::loadLayout()
 
 void MainWidget::onDockEidgetCreated(DockWidget *widget)
 {
-    widget->attachWidget(new QTextEdit(widget->windowTitle()));
+    if (widget->windowTitle() == "内存映射")
+    {
+        auto table = new QTableView(widget);
+        table->setModel(m_memoryMapModel);
+        table->setSelectionBehavior(QAbstractItemView::SelectRows);
+        table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+        widget->attachWidget(table);
+    }
+    else
+    {
+        widget->attachWidget(new QTextEdit(widget->windowTitle(), widget));
+    }
+}
+
+void MainWidget::onFileOpen()
+{
+    //TODO:
+    QString path,args;
+    {
+        QDialog dlg(this);
+        dlg.setWindowTitle("打开文件");
+
+        QGridLayout* glay = new QGridLayout;
+        QLineEdit* pathEdit = new QLineEdit(&dlg);
+        QPushButton* browseBtn = new QPushButton("...");
+        glay->addWidget(new QLabel("程序：", &dlg), 0, 0);
+        glay->addWidget(pathEdit, 0, 1);
+        glay->addWidget(browseBtn, 0, 2);
+        QLineEdit* argsEdit = new QLineEdit(&dlg);
+        glay->addWidget(new QLabel("参数：", &dlg), 1, 0);
+        glay->addWidget(argsEdit, 1, 1);
+        QDialogButtonBox* btnBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+        glay->addWidget(btnBox, 2, 0, -1, -1);
+        dlg.setLayout(glay);
+
+        connect(btnBox, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+        connect(btnBox, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+        connect(browseBtn, &QPushButton::clicked,[pathEdit,&dlg]
+        {
+            pathEdit->setText(QFileDialog::getOpenFileName(&dlg,"打开",QDir::currentPath()));
+        });
+
+        dlg.resize(500, 150);
+        if (dlg.exec() != QDialog::Accepted)
+        {
+            return;
+        }
+
+        path = pathEdit->text();
+        args = argsEdit->text();
+    }
+
+    m_debugCore = std::make_shared<DebugCore>(this);
+    connect(m_debugCore.get(), &DebugCore::memoryMapRefreshed,[this](std::vector<MemoryRegion>& regions)
+    {
+        m_memoryMapModel->setRowCount(regions.size());
+        for (unsigned i = 0; i < regions.size(); ++i)
+        {
+            m_memoryMapModel->setItem(i, 0, new QStandardItem(QString("%1").arg(regions[i].start, 0, 16)));
+            m_memoryMapModel->setItem(i, 1, new QStandardItem(QString("%1").arg(regions[i].size, 0, 16)));
+            m_memoryMapModel->setItem(i, 2, new QStandardItem(QString("%1").arg(regions[i].info.protection, 0, 16)));
+        }
+    });
+    m_debugCore->refreshMemoryMap();
+
+    m_debugCore->debugNew(path.toStdString(),args.toStdString());
 }

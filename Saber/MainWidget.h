@@ -2,12 +2,15 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QtWidgets>
+
 #include <string>
 #include <map>
+#include <memory>
 
 #include <QtFlexManager.h>
 
-class QAction;
+class DebugCore;
 
 class MainWidget : public QMainWindow
 {
@@ -30,9 +33,15 @@ private:
 
     void onDockEidgetCreated(DockWidget* widget);
 
+    void onFileOpen();
+
 private:
     std::map<std::string,QAction*> m_actions;
 
     FlexWidget* center;
+
+    std::shared_ptr<DebugCore> m_debugCore;
+
+    QStandardItemModel* m_memoryMapModel;
 };
 

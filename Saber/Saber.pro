@@ -11,6 +11,8 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = Saber
 TEMPLATE = app
 
+QMAKE_CXXFLAGS += -std=c++11
+
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../QtFlex5/release/ -lQt5Flex
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../QtFlex5/debug/ -lQt5Flexd
 else:unix:CONFIG(release,debug|release): LIBS += -L$$OUT_PWD/../QtFlex5/ -lQt5Flex
@@ -20,6 +22,10 @@ INCLUDEPATH += $$PWD/../QtFlex5
 DEPENDPATH += $$PWD/../QtFlex5
 
 SOURCES += main.cpp\
-        MainWidget.cpp
+        MainWidget.cpp \
+    DebugCore.cpp
 
-HEADERS  += MainWidget.h
+HEADERS  += MainWidget.h \
+    DebugCore.h
+
+FORMS +=
