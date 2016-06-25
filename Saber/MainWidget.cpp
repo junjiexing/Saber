@@ -255,8 +255,8 @@ void MainWidget::onFileOpen()
         args = argsEdit->text();
     }
 
-    m_debugCore = std::make_shared<DebugCore>(this);
-    connect(m_debugCore.get(), &DebugCore::memoryMapRefreshed,[this](std::vector<MemoryRegion>& regions)
+    m_debugCore = new DebugCore;
+    connect(m_debugCore, &DebugCore::memoryMapRefreshed,[this](std::vector<MemoryRegion>& regions)
     {
         m_memoryMapModel->setRowCount(regions.size());
         for (unsigned i = 0; i < regions.size(); ++i)
@@ -268,5 +268,5 @@ void MainWidget::onFileOpen()
     });
     m_debugCore->refreshMemoryMap();
 
-    m_debugCore->debugNew(path.toStdString(),args.toStdString());
+    m_debugCore->debugNew(path, args);
 }

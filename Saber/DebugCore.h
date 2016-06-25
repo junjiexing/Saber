@@ -23,21 +23,25 @@ struct MemoryRegion
     vm_region_submap_short_info_64 info;
 };
 
-class DebugCore : public QObject, public std::enable_shared_from_this<DebugCore>
+class DebugProcess;
+
+class DebugCore : public QObject
 {
     Q_OBJECT
 public:
-    DebugCore(QObject *parent);
+    DebugCore();
 
     void refreshMemoryMap();
-    bool debugNew(const std::string &path, const std::string &args);
+    bool debugNew(const QString &path, const QString &args);
 
 signals:
     void memoryMapRefreshed(std::vector<MemoryRegion>& regions);
+    void debugLoopFinished(DebugProcess* p);
 
 private:
     void debugLoop();
-
+private slots:
+    void onDebugLoopFinished(DebugProcess* p);
 private:
     std::vector<MemoryRegion> m_memoryRegions;
 //    QString m_path;

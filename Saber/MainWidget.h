@@ -40,7 +40,7 @@ private:
 
     FlexWidget* center;
 
-    std::shared_ptr<DebugCore> m_debugCore;
+    DebugCore* m_debugCore;
 
     QStandardItemModel* m_memoryMapModel;
 };
