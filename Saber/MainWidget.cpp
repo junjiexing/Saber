@@ -19,12 +19,6 @@ MainWidget::MainWidget(QWidget *parent)
     center = FlexManager::instance()->createFlexWidget(Flex::HybridView, this, Flex::widgetFlags(), "RootFlex");
     setCentralWidget(center);
 
-    //初始化model
-    m_memoryMapModel = new QStandardItemModel(0, 3, this);
-    QStringList header;
-    header<<"起始地址"<<"大小"<<"权限";
-    m_memoryMapModel->setHorizontalHeaderLabels(header);
-
     //创建菜单
     auto menu = new QMenu("文件",this);
     addAction("file.open", menu->addAction("打开", this, [this]{onFileOpen();}));
@@ -48,7 +42,7 @@ MainWidget::MainWidget(QWidget *parent)
     addAction("view.memoryMapView", menu->addAction("内存映射窗口窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"内存映射",Flex::B0,0,center);}));
     addAction("view.watchView", menu->addAction("监视窗口", this, []{}));
     addAction("view.breakpointView", menu->addAction("断点窗口", this, []{}));
-    addAction("view.outputView", menu->addAction("输出编窗口", this, []{}));
+    addAction("view.outputView", menu->addAction("输出窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"输出",Flex::B0,0,center);}));
     menuBar()->addMenu(menu);
 
     menu = new QMenu("调试",this);
@@ -114,6 +108,18 @@ QToolButton  {
     tb = addToolBar("帮助");
     tb->setStyleSheet(qss);
     tb->addAction(getAction("help.about"));
+
+
+    //初始化model
+    m_memoryMapModel = new QStandardItemModel(0, 3, this);
+    QStringList header;
+    header<<"起始地址"<<"大小"<<"权限";
+    m_memoryMapModel->setHorizontalHeaderLabels(header);
+
+    m_outputEdit = new QTextEdit;
+    m_outputEdit->hide();
+//    m_outputEdit->setReadOnly(true);
+    m_outputEdit->append("Hello");
 }
 
 MainWidget::~MainWidget()
@@ -147,6 +153,27 @@ bool MainWidget::removeAction(const std::string& key)
 DockWidget *MainWidget::findDockWidget(const QString& name)
 {
     return FlexManager::instance()->dockWidget(name);
+}
+
+void MainWidget::onOutputMessage(const QString &msg, MessageType type)
+{
+    QString str;
+    switch (type)
+    {
+    case MessageType::Info:
+        str = "Info: ";
+        break;
+    case MessageType::Warning:
+        str = "Warn: ";
+        break;
+    case MessageType::Error:
+        str = "Erro: ";
+        break;
+    }
+
+    str += msg;
+
+    m_outputEdit->append(str);
 }
 
 DockWidget *MainWidget::addDockWidget(Flex::ViewMode mode,
@@ -211,6 +238,11 @@ void MainWidget::onDockEidgetCreated(DockWidget *widget)
         table->setEditTriggers(QAbstractItemView::NoEditTriggers);
         widget->attachWidget(table);
     }
+    else if (widget->windowTitle() == "输出")
+    {
+        m_outputEdit->show();
+        widget->attachWidget(m_outputEdit);
+    }
     else
     {
         widget->attachWidget(new QTextEdit(widget->windowTitle(), widget));
@@ -266,7 +298,8 @@ void MainWidget::onFileOpen()
             m_memoryMapModel->setItem(i, 2, new QStandardItem(QString("%1").arg(regions[i].info.protection, 0, 16)));
         }
     });
+    connect(m_debugCore, SIGNAL(outputMessage(QString,MessageType)), this,
+            SLOT(onOutputMessage(QString,MessageType)),Qt::BlockingQueuedConnection);
     m_debugCore->refreshMemoryMap();
-
     m_debugCore->debugNew(path, args);
 }

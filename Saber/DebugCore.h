@@ -15,6 +15,8 @@
 
 #include <QObject>
 
+#include "Common.h"
+
 
 struct MemoryRegion
 {
@@ -32,11 +34,17 @@ public:
     DebugCore();
 
     void refreshMemoryMap();
+    bool readMemory(void* buffer, mach_vm_address_t address,
+                    mach_vm_size_t size, vm_region_basic_info_data_64_t *info);
+
     bool debugNew(const QString &path, const QString &args);
+    mach_vm_address_t findMainBinary();
+    mach_vm_address_t getEntryPoint();
 
 signals:
     void memoryMapRefreshed(std::vector<MemoryRegion>& regions);
     void debugLoopFinished(DebugProcess* p);
+    void outputMessage(const QString& msg, MessageType type);
 
 private:
     void debugLoop();
