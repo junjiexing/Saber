@@ -34,11 +34,10 @@ public:
     DebugCore();
 
     void refreshMemoryMap();
-    bool readMemory(void* buffer, mach_vm_address_t address,
-                    mach_vm_size_t size, vm_region_basic_info_data_64_t *info);
+    bool readMemory(mach_vm_address_t address, void* buffer, mach_vm_size_t size);
 
     bool debugNew(const QString &path, const QString &args);
-    mach_vm_address_t findMainBinary();
+    mach_vm_address_t findBaseAddress();
     mach_vm_address_t getEntryPoint();
     Register getAllRegisterState(pid_t pid);
 

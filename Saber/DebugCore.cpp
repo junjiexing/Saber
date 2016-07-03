@@ -143,25 +143,11 @@ void DebugCore::refreshMemoryMap()
     emit memoryMapRefreshed(m_memoryRegions);
 }
 
-bool DebugCore::readMemory(void* buffer, mach_vm_address_t address,
-                mach_vm_size_t size, vm_region_basic_info_data_64_t *info)
+bool DebugCore::readMemory(mach_vm_address_t address, void* buffer, mach_vm_size_t size)
 {
-    kern_return_t kr;
-
-    mach_msg_type_number_t info_cnt = sizeof (vm_region_basic_info_data_64_t);
-    mach_port_t object_name;
-    mach_vm_size_t size_info;
-    mach_vm_address_t address_info = address;
-    kr = mach_vm_region(m_task, &address_info, &size_info, VM_REGION_BASIC_INFO_64, (vm_region_info_t)info, &info_cnt, &object_name);
-    if (kr)
-    {
-        outputMessage(QString("mach_vm_region failed with error: ").append(mach_error_string(kr)), MessageType::Error);
-        return false;
-    }
-
     /* read memory - vm_read_overwrite because we supply the buffer */
     mach_vm_size_t nread;
-    kr = mach_vm_read_overwrite(m_task, address, size, (mach_vm_address_t)buffer, &nread);
+    kern_return_t kr = mach_vm_read_overwrite(m_task, address, size, (mach_vm_address_t)buffer, &nread);
     if (kr)
     {
         outputMessage(QString("mach_vm_read_overwrite failed with error: ").append(mach_error_string(kr)), MessageType::Error);
@@ -175,10 +161,10 @@ bool DebugCore::readMemory(void* buffer, mach_vm_address_t address,
     return true;
 }
 
-mach_vm_address_t DebugCore::findMainBinary()
+mach_vm_address_t DebugCore::findBaseAddress()
 {
     vm_address_t iter = 0;
-    while (1)
+    for (;;)
     {
         mach_header mh = {0};
         vm_address_t addr = iter;
@@ -191,40 +177,39 @@ mach_vm_address_t DebugCore::findMainBinary()
         kern_return_t kr = vm_region_recurse_64(m_task, &addr, &lsize, &depth, (vm_region_info_t)&info, &count);
         if (kr != KERN_SUCCESS)
         {
-            outputMessage(QString("查找入口点失败，vm_region_recurse_64：").append(mach_error_string(kr)), MessageType::Error);
+            outputMessage(QString("查找基地址失败，vm_region_recurse_64：").append(mach_error_string(kr)), MessageType::Error);
             return 0;
         }
 
-        kr = mach_vm_read_overwrite(m_task,
-                (mach_vm_address_t)addr,
-                (mach_vm_size_t)sizeof(struct mach_header),
-                (mach_vm_address_t)&mh, &bytes_read);
-        if (kr == KERN_SUCCESS && bytes_read == sizeof(struct mach_header))
+        ;
+        if (!readMemory(addr, &mh, sizeof(struct mach_header)))
         {
-            /* only one image with MH_EXECUTE filetype */
-            if ( (mh.magic == MH_MAGIC || mh.magic == MH_MAGIC_64) && mh.filetype == MH_EXECUTE)
-            {
-                return addr;
-            }
+            outputMessage(QString("查找基地址失败，readMemory() error"), MessageType::Error);
+            return 0;
         }
+        /* only one image with MH_EXECUTE filetype */
+        if ( (mh.magic == MH_MAGIC || mh.magic == MH_MAGIC_64) && mh.filetype == MH_EXECUTE)
+        {
+            return addr;
+        }
+
         iter = addr + lsize;
     }
-    outputMessage(QString("查找入口点失败"), MessageType::Error);
+    outputMessage(QString("查找基地址失败"), MessageType::Error);
     return 0;
 }
 
 mach_vm_address_t DebugCore::getEntryPoint()
 {
-    mach_vm_address_t aslrBase = findMainBinary();
+    mach_vm_address_t aslrBase = findBaseAddress();
     mach_header header = {0};
-    vm_region_basic_info_data_64_t region_info = {0};
     //TODO:
-    readMemory(&header, aslrBase, sizeof(header), &region_info);
-    emit outputMessage(QString("Magic:%1, ncmds: %2").arg(header.magic).arg(header.ncmds), MessageType::Info);
+    readMemory(aslrBase, &header, sizeof(header));
+    outputMessage(QString("Magic:%1, ncmds: %2").arg(header.magic).arg(header.ncmds), MessageType::Info);
 
     std::vector<char> cmdBuff(header.sizeofcmds);
     auto p = cmdBuff.data();
-    readMemory(p, aslrBase + sizeof(mach_header_64), cmdBuff.size(), &region_info);
+    readMemory(aslrBase + sizeof(mach_header_64), p, cmdBuff.size());
 
     for (int i = 0; i < header.ncmds; ++i)
     {
@@ -240,7 +225,7 @@ mach_vm_address_t DebugCore::getEntryPoint()
 
         entry_point_command* epcmd = (entry_point_command*)p;
         mach_vm_address_t ep = aslrBase + epcmd->entryoff;
-        emit outputMessage(QString("Entry point is %1").arg(ep, 16), MessageType::Info);
+        outputMessage(QString("Entry point is %1").arg(ep, 16), MessageType::Info);
         return ep;
     }
 
