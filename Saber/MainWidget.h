@@ -11,6 +11,7 @@
 #include <QtFlexManager.h>
 
 #include "Common.h"
+#include "RegisterModel.h"
 
 class DebugCore;
 
@@ -49,6 +50,8 @@ private:
     DebugCore* m_debugCore;
 
     QStandardItemModel* m_memoryMapModel;
+    RegisterModel* m_registerModel;
+    //TODO:实现一个text的model
     QTextEdit* m_outputEdit;
 };
 

@@ -40,11 +40,14 @@ public:
     bool debugNew(const QString &path, const QString &args);
     mach_vm_address_t findMainBinary();
     mach_vm_address_t getEntryPoint();
+    Register getAllRegisterState(pid_t pid);
+
 
 signals:
     void memoryMapRefreshed(std::vector<MemoryRegion>& regions);
     void debugLoopFinished(DebugProcess* p);
     void outputMessage(const QString& msg, MessageType type);
+    void refreshRegister(const Register regs);
 
 private:
     void debugLoop();
@@ -56,6 +59,7 @@ private:
 //    QString m_args;
 
     pid_t m_pid;
+    pid_t m_currPid = 0;
     mach_port_t m_task;
 
     std::thread m_debugThread;

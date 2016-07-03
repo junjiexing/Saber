@@ -27,10 +27,12 @@ DEPENDPATH += $$PWD/../QtFlex5
 
 SOURCES += main.cpp\
         MainWidget.cpp \
-    DebugCore.cpp
+    DebugCore.cpp \
+    RegisterModel.cpp
 
 HEADERS  += MainWidget.h \
     DebugCore.h \
-    Common.h
+    Common.h \
+    RegisterModel.h
 
 FORMS +=

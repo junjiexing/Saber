@@ -240,11 +240,76 @@ mach_vm_address_t DebugCore::getEntryPoint()
 
         entry_point_command* epcmd = (entry_point_command*)p;
         mach_vm_address_t ep = aslrBase + epcmd->entryoff;
-        emit outputMessage(QString("Entry point is %1").arg(ep), MessageType::Info);
+        emit outputMessage(QString("Entry point is %1").arg(ep, 16), MessageType::Info);
         return ep;
     }
 
     return 0;
+}
+
+Register DebugCore::getAllRegisterState(pid_t pid)
+{
+    mach_port_name_t task;
+    kern_return_t err = task_for_pid(mach_task_self(), pid, &task);
+    if (err != KERN_SUCCESS)
+    {
+        outputMessage(QString("task_for_pid() error: \"%1\" 获取所有寄存器状态失败。").arg(mach_error_string(err)), MessageType::Error);
+        return {};
+    }
+
+//          /* Suspend the target process */
+//          err = task_suspend(task);
+//          if (err != KERN_SUCCESS) {
+//            fprintf(stderr, "task_suspend() failed\n");
+//            exit(EXIT_FAILURE);
+//          }
+
+      /* Get all threads in the specified task */
+    thread_act_port_array_t threadList;
+    mach_msg_type_number_t threadCount;
+    err = task_threads(task, &threadList, &threadCount);
+    if (err != KERN_SUCCESS)
+    {
+        outputMessage(QString("task_threads() error: \"%1\" 获取所有寄存器状态失败。").arg(mach_error_string(err)), MessageType::Error);
+        return {};
+    }
+
+    /* Get the thread state for the first thread */
+    x86_thread_state_t state;
+    mach_msg_type_number_t stateCount = x86_THREAD_STATE_COUNT;
+    err = thread_get_state(threadList[0],
+                     x86_THREAD_STATE,
+                     (thread_state_t)&state,
+                     &stateCount);
+    if (err != KERN_SUCCESS)
+    {
+        outputMessage(QString("thread_get_state() error: \"%1\" 获取所有寄存器状态失败。").arg(mach_error_string(err)), MessageType::Error);
+        return {};
+    }
+
+    Register regs;
+    regs.cs = state.uts.ts64.__cs;
+    regs.fs = state.uts.ts64.__fs;
+    regs.gs = state.uts.ts64.__gs;
+    regs.r8 = state.uts.ts64.__r8;
+    regs.r9 = state.uts.ts64.__r9;
+    regs.r10 = state.uts.ts64.__r10;
+    regs.r11 = state.uts.ts64.__r11;
+    regs.r12 = state.uts.ts64.__r12;
+    regs.r13 = state.uts.ts64.__r13;
+    regs.r14 = state.uts.ts64.__r14;
+    regs.r15 = state.uts.ts64.__r15;
+    regs.rax = state.uts.ts64.__rax;
+    regs.rbx = state.uts.ts64.__rbx;
+    regs.rcx = state.uts.ts64.__rcx;
+    regs.rdx = state.uts.ts64.__rdx;
+    regs.rbp = state.uts.ts64.__rbp;
+    regs.rdi = state.uts.ts64.__rdi;
+    regs.rsi = state.uts.ts64.__rsi;
+    regs.rsp = state.uts.ts64.__rsp;
+    regs.rflags = state.uts.ts64.__rflags;
+
+    return regs;
 }
 
 bool DebugCore::debugNew(const QString &path, const QString &args)
@@ -255,7 +320,7 @@ bool DebugCore::debugNew(const QString &path, const QString &args)
     m_pid = p->pid();
     if (m_pid <= 0)
     {
-        qDebug() << "Start DebugEE process failed:" << p->errorString();
+        outputMessage(QString("启动调试进程失败：%1").arg(p->errorString()), MessageType::Error);
         return false;
     }
 
@@ -263,7 +328,7 @@ bool DebugCore::debugNew(const QString &path, const QString &args)
     kern_return_t err = task_for_pid(current_task(), m_pid, &m_task);
     if (err != KERN_SUCCESS)
     {
-        qDebug() << "task_for_pid() failed:" << mach_error_string(err);
+        outputMessage(QString("task_for_pid() error: %1 启动调试进程失败").arg(mach_error_string(err)), MessageType::Error);
         return false;
     }
 
@@ -286,14 +351,16 @@ void DebugCore::debugLoop()
     {
         //等待子进程信号
         int status;
-        wait(&status);
-        getEntryPoint();
+        m_currPid = wait(&status);
         //printf("status = %d\n", status);
         if (WIFEXITED(status))//子进程发送退出信号，退出循环
         {
             outputMessage("调试目标已退出。", MessageType::Info);
             break;
         }
+        getEntryPoint();
+
+        refreshRegister(getAllRegisterState(m_currPid));
         //让子进程继续执行
         ptrace(PT_CONTINUE, m_pid, (caddr_t)1, 0);
     }

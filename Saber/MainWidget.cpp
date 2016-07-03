@@ -37,7 +37,7 @@ MainWidget::MainWidget(QWidget *parent)
         addDockWidget(Flex::FileView,QString("反汇编-%1").arg(++index),Flex::M,0,center);
     }));
     addAction("view.memoryView", menu->addAction("内存窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"内存",Flex::B0,0,center);}));
-    addAction("view.registerView", menu->addAction("寄存器编窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"寄存器",Flex::B0,0,center);}));
+    addAction("view.registerView", menu->addAction("寄存器窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"寄存器",Flex::B0,0,center);}));
     addAction("view.callstackView", menu->addAction("调用堆栈窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"调用堆栈",Flex::B0,0,center);}));
     addAction("view.memoryMapView", menu->addAction("内存映射窗口窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"内存映射",Flex::B0,0,center);}));
     addAction("view.watchView", menu->addAction("监视窗口", this, []{}));
@@ -112,14 +112,14 @@ QToolButton  {
 
     //初始化model
     m_memoryMapModel = new QStandardItemModel(0, 3, this);
-    QStringList header;
-    header<<"起始地址"<<"大小"<<"权限";
-    m_memoryMapModel->setHorizontalHeaderLabels(header);
+    m_memoryMapModel->setHorizontalHeaderLabels(QStringList()<<"起始地址"<<"大小"<<"权限");
+
+    m_registerModel = new RegisterModel(this);
 
     m_outputEdit = new QTextEdit;
     m_outputEdit->hide();
-//    m_outputEdit->setReadOnly(true);
-    m_outputEdit->append("Hello");
+    m_outputEdit->setReadOnly(true);
+
 }
 
 MainWidget::~MainWidget()
@@ -243,6 +243,12 @@ void MainWidget::onDockEidgetCreated(DockWidget *widget)
         m_outputEdit->show();
         widget->attachWidget(m_outputEdit);
     }
+    else if (widget->windowTitle() == "寄存器")
+    {
+        auto view = new QTreeView(widget);
+        view->setModel(m_registerModel);
+        widget->attachWidget(view);
+    }
     else
     {
         widget->attachWidget(new QTextEdit(widget->windowTitle(), widget));
@@ -300,6 +306,8 @@ void MainWidget::onFileOpen()
     });
     connect(m_debugCore, SIGNAL(outputMessage(QString,MessageType)), this,
             SLOT(onOutputMessage(QString,MessageType)),Qt::BlockingQueuedConnection);
-    m_debugCore->refreshMemoryMap();
+    connect(m_debugCore, &DebugCore::refreshRegister, m_registerModel, &RegisterModel::setRegister, Qt::BlockingQueuedConnection);
+
     m_debugCore->debugNew(path, args);
+    m_debugCore->refreshMemoryMap();
 }
