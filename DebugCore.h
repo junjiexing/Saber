@@ -8,7 +8,6 @@
 
 #include <sys/types.h>
 #include <unistd.h>
-#include <mach/mach.h>
 #include <mach/mach_vm.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
@@ -16,14 +15,9 @@
 #include <QObject>
 
 #include "Common.h"
+#include "BreakPoint.h"
+#include "TargetException.h"
 
-
-struct MemoryRegion
-{
-    mach_vm_address_t start;
-    mach_vm_size_t size;
-    vm_region_submap_short_info_64 info;
-};
 
 class DebugProcess;
 
@@ -35,12 +29,16 @@ public:
 
     void refreshMemoryMap();
     bool readMemory(mach_vm_address_t address, void* buffer, mach_vm_size_t size);
+    bool writeMemory(mach_vm_address_t address, const void* buffer, mach_vm_size_t size);
 
     bool debugNew(const QString &path, const QString &args);
     mach_vm_address_t findBaseAddress();
     mach_vm_address_t getEntryPoint();
     Register getAllRegisterState(pid_t pid);
 
+    bool getAllSegment();
+
+    bool addBreakPoint(uint64_t address, bool enabled = true, bool isHardware = false);
 
 signals:
     void memoryMapRefreshed(std::vector<MemoryRegion>& regions);
@@ -50,6 +48,7 @@ signals:
 
 private:
     void debugLoop();
+    bool handleException(ExceptionInfo const& info);
 private slots:
     void onDebugLoopFinished(DebugProcess* p);
 private:
@@ -61,6 +60,8 @@ private:
     pid_t m_currPid = 0;
     mach_port_t m_task;
 
-    std::thread m_debugThread;
+    std::vector<std::shared_ptr<BreakPoint>> m_breakPoints;
+
+    std::vector<Segment> m_segments;
 };
 

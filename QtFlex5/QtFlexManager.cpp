@@ -62,7 +62,7 @@ public:
     }
 
 public:
-    bool nativeEventFilter(const QByteArray &, void *message, long *result);
+    bool nativeEventFilter(const QByteArray &eventType, void *message, long *result);
 
 public:
     QString flexWidgetName(DockWidget* dockWidget) const;
@@ -85,7 +85,7 @@ public:
     bool _ready;
 };
 
-bool FlexManagerImpl::nativeEventFilter(const QByteArray &/*eventType*/, void */*message*/, long */*result*/)
+bool FlexManagerImpl::nativeEventFilter(const QByteArray &eventType, void *message, long *result)
 {
     return false;
 }
@@ -302,7 +302,7 @@ bool FlexManager::load(const QByteArray& content, const QMap<QString, QWidget*>&
 
         Flex::ViewMode viewMode = (Flex::ViewMode)flexWidgetObject["viewMode"].toInt();
         QWidget* parent = parents.value(flexWidgetObject["parent"].toString(), nullptr);
-        //Qt::WindowFlags flags = (Qt::WindowFlags)flexWidgetObject["windowFlags"].toInt();
+        Qt::WindowFlags flags = (Qt::WindowFlags)flexWidgetObject["windowFlags"].toInt();
         QString flexWidgetName = flexWidgetObject["flexWidgetName"].toString();
 
         FlexWidget* flexWidget = flexWidgetName == "RootFlex"

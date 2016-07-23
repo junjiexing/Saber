@@ -1,8 +1,10 @@
-#include "MainWidget.h"
-#include <QApplication>
+#include "MainWindow.h"
+
 #include <QtFlexStyle.h>
+
+#include <QApplication>
 #include <QProcess>
-#include <QDebug>
+//#include "logging.hpp"
 
 #include <unistd.h>
 
@@ -25,6 +27,8 @@ int main(int argc, char *argv[])
         p.waitForReadyRead(-1);
         return 0;
     }
+
+//    AVHTTP_AUTO_LOGGER(".");
 
     QApplication a(argc, argv);
     QApplication::setStyle(new FlexStyle());
