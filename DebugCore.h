@@ -26,6 +26,7 @@ class DebugCore : public QObject
     Q_OBJECT
 public:
     DebugCore();
+    ~DebugCore();
 
     void refreshMemoryMap();
     bool readMemory(mach_vm_address_t address, void* buffer, mach_vm_size_t size);
@@ -36,14 +37,13 @@ public:
     mach_vm_address_t getEntryPoint();
     Register getAllRegisterState(pid_t pid);
 
-    bool getAllSegment();
+    void getAllSegment();
 
     bool addBreakPoint(uint64_t address, bool enabled = true, bool isHardware = false);
 
 signals:
     void memoryMapRefreshed(std::vector<MemoryRegion>& regions);
     void debugLoopFinished(DebugProcess* p);
-    void outputMessage(const QString& msg, MessageType type);
     void refreshRegister(const Register regs);
 
 private:
@@ -63,5 +63,7 @@ private:
     std::vector<std::shared_ptr<BreakPoint>> m_breakPoints;
 
     std::vector<Segment> m_segments;
+
+    TargetException m_targetException;
 };
 

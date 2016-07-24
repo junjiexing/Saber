@@ -1,5 +1,6 @@
 #include "BreakPoint.h"
 #include "DebugCore.h"
+#include "Log.h"
 
 BreakPoint::BreakPoint(DebugCore *debugCore)
     :m_debugCore(debugCore), m_address(0),
@@ -22,13 +23,13 @@ bool BreakPoint::setEnabled(bool enabled)
         bool r = m_debugCore->readMemory(m_address, &m_orgByte, 1);
         if (!r)
         {
-            m_debugCore->outputMessage(QString("无法启用断点 %1：readMemory()失败。").arg(QString::number(m_address, 16)), MessageType::Warning);
+            log(QString("无法启用断点 %1：readMemory()失败。").arg(QString::number(m_address, 16)), LogType::Warning);
             return false;
         }
         r = m_debugCore->writeMemory(m_address, &bpData, 1);
         if (!r)
         {
-            m_debugCore->outputMessage(QString("无法启用断点 %1：writeMemory()失败。").arg(QString::number(m_address, 16)), MessageType::Warning);
+            log(QString("无法启用断点 %1：writeMemory()失败。").arg(QString::number(m_address, 16)), LogType::Warning);
             return false;
         }
 
@@ -39,20 +40,20 @@ bool BreakPoint::setEnabled(bool enabled)
     bool r = m_debugCore->readMemory(m_address, &tmp, 1);
     if (!r)
     {
-        m_debugCore->outputMessage(QString("读取断点 %1 处内存失败。").arg(QString::number(m_address, 16)), MessageType::Warning);
+        log(QString("读取断点 %1 处内存失败。").arg(QString::number(m_address, 16)), LogType::Warning);
     }
 
     if (tmp != bpData)
     {
-        m_debugCore->outputMessage(QString("断点 %1 的数据不为0xCC，已被重写为 0x%2")
+        log(QString("断点 %1 的数据不为0xCC，已被重写为 0x%2")
                                    .arg(QString::number(m_address, 16)).arg(QString::number(tmp, 16)),
-                                   MessageType::Warning);
+                                   LogType::Warning);
     }
 
     r = m_debugCore->writeMemory(m_address, &m_orgByte, 1);
     if (!r)
     {
-        m_debugCore->outputMessage(QString("无法禁用断点 %1：writeMemory()失败。").arg(QString::number(m_address, 16)), MessageType::Warning);
+        log(QString("无法禁用断点 %1：writeMemory()失败。").arg(QString::number(m_address, 16)), LogType::Warning);
         return false;
     }
 

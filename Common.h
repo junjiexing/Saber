@@ -5,13 +5,6 @@
 #include <mach/mach.h>
 #include <vector>
 
-enum class MessageType
-{
-    Info,
-    Warning,
-    Error
-};
-
 
 struct MemoryRegion
 {

@@ -34,7 +34,7 @@ set(SOURCE_FILES
 
         mach_excServer.c
         mach_excUser.c
-        TargetException.cpp TargetException.h)
+        TargetException.cpp TargetException.h Log.cpp Log.h)
 
 include_directories(
         ${Qt5Widgets_INCLUDES}

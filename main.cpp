@@ -4,7 +4,6 @@
 
 #include <QApplication>
 #include <QProcess>
-//#include "logging.hpp"
 
 #include <unistd.h>
 

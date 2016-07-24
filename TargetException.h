@@ -6,8 +6,61 @@
 
 #include "Common.h"
 
+#include <map>
+#include <thread>
+#include <atomic>
+
 using ExceptionCallback = std::function<bool(ExceptionInfo const&)>;
 
-bool waitException(task_t task);
-bool replyException(task_t task);
-bool setExceptionPort(task_t task, ExceptionCallback callback);
+class TargetException
+{
+public:
+    TargetException();
+    bool setExceptionPort(task_t task, ExceptionCallback callback);
+
+    bool run();
+    void stop();
+
+    kern_return_t onCatchMachExceptionRaise(
+            mach_port_t excPort, mach_port_t threadPort,
+            mach_port_t taskPort, exception_type_t excType,
+            mach_exception_data_t excData, mach_msg_type_number_t excDataCount);
+    kern_return_t forwardException(mach_port_t thread,
+                                   mach_port_t task, exception_type_t exception,
+                                   mach_exception_data_t data, mach_msg_type_number_t data_count);
+    static TargetException* getSelfByTask(task_t task);
+
+private:
+    task_t m_task;
+    ExceptionCallback m_callback;
+
+    std::atomic<bool> m_stop;
+
+    struct
+    {
+        mach_msg_type_number_t count;
+        exception_mask_t      masks[16];
+        exception_handler_t   ports[16];
+        exception_behavior_t  behaviors[16];
+        thread_state_flavor_t flavors[16];
+    } m_oldExcPorts;
+
+    mach_port_name_t m_exceptionPort;
+
+    struct
+    {
+        mach_msg_header_t head;
+        char data[256];
+    } m_sendMsg;
+
+    struct
+    {
+        mach_msg_header_t head;
+        mach_msg_body_t msgh_body;
+        char data[1024];
+    } m_rcvMsg;
+
+
+    static std::map<task_t, TargetException*> taskToSelf;
+    static std::mutex taskToSelfMtx;
+};

@@ -1,4 +1,5 @@
 #include "MainWindow.h"
+#include "Log.h"
 
 #include <QtDockWidget.h>
 #include <QtFlexWidget.h>
@@ -115,15 +116,21 @@ QToolButton  {
 
 	m_registerModel = new RegisterModel(this);
 
-	m_outputEdit = new QTextEdit;
-	m_outputEdit->hide();
-	m_outputEdit->setReadOnly(true);
-
+	m_logModel = new QStandardItemModel(this);
+    m_logModel->setHorizontalHeaderLabels(QStringList() << "级别" << "信息");
+    setLogFunc([this](QString const& msg, LogType type)
+    {
+        std::lock_guard<std::mutex> _(m_logMtx);
+        m_logModel->appendRow(
+                QList<QStandardItem*>()
+                <<(new QStandardItem(logTypeToString(type)))
+                <<(new QStandardItem(msg)));
+    });
 }
 
 MainWidget::~MainWidget()
 {
-
+    setLogFunc(nullptr);
 }
 
 void MainWidget::addAction(const std::string& key, QAction* action)
@@ -154,26 +161,6 @@ DockWidget *MainWidget::findDockWidget(const QString& name)
 	return FlexManager::instance()->dockWidget(name);
 }
 
-void MainWidget::onOutputMessage(const QString &msg, MessageType type)
-{
-	QString str;
-	switch (type)
-	{
-		case MessageType::Info:
-			str = "Info: ";
-			break;
-		case MessageType::Warning:
-			str = "Warn: ";
-			break;
-		case MessageType::Error:
-			str = "Erro: ";
-			break;
-	}
-
-	str += msg;
-
-	m_outputEdit->append(str);
-}
 
 DockWidget *MainWidget::addDockWidget(Flex::ViewMode mode,
 									  const QString& name, Flex::DockArea area, int siteIndex,
@@ -239,8 +226,12 @@ void MainWidget::onDockEidgetCreated(DockWidget *widget)
 	}
 	else if (widget->windowTitle() == "输出")
 	{
-		m_outputEdit->show();
-		widget->attachWidget(m_outputEdit);
+        auto log_view = new QTableView(this);
+        log_view->setSelectionBehavior(QAbstractItemView::SelectRows);
+        log_view->setEditTriggers(QAbstractItemView::NoEditTriggers);
+        log_view->horizontalHeader()->setStretchLastSection(true);
+        log_view->setModel(m_logModel);
+        widget->attachWidget(log_view);
 	}
 	else if (widget->windowTitle() == "寄存器")
 	{
@@ -303,8 +294,6 @@ void MainWidget::onFileOpen()
 			m_memoryMapModel->setItem(i, 2, new QStandardItem(QString("%1").arg(regions[i].info.protection, 0, 16)));
 		}
 	});
-	connect(m_debugCore, SIGNAL(outputMessage(QString,MessageType)), this,
-			SLOT(onOutputMessage(QString,MessageType)),Qt::BlockingQueuedConnection);
 	connect(m_debugCore, &DebugCore::refreshRegister, m_registerModel, &RegisterModel::setRegister, Qt::BlockingQueuedConnection);
 
 	m_debugCore->debugNew(path, args);

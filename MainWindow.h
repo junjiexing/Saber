@@ -7,6 +7,7 @@
 #include <string>
 #include <map>
 #include <memory>
+#include <mutex>
 
 #include <QtFlexManager.h>
 
@@ -29,9 +30,6 @@ public:
     bool removeAction(const std::string& key);
 
     DockWidget* findDockWidget(const QString& name);
-
-public slots:
-    void onOutputMessage(const QString& msg, MessageType type);
 private:
     DockWidget* addDockWidget(Flex::ViewMode mode, const QString& name, Flex::DockArea area, int siteIndex, FlexWidget* parent);
     DockWidget* activeOrAddDockWidget(Flex::ViewMode mode, const QString& name, Flex::DockArea area, int siteIndex, FlexWidget* parent);
@@ -51,7 +49,7 @@ private:
 
     QStandardItemModel* m_memoryMapModel;
     RegisterModel* m_registerModel;
-    //TODO:实现一个text的model
-    QTextEdit* m_outputEdit;
+    QStandardItemModel* m_logModel;
+    std::mutex m_logMtx;
 };
 
