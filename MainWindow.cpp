@@ -1,5 +1,7 @@
 #include "MainWindow.h"
 #include "Log.h"
+#include "DisasmView.h"
+#include "EventDispatcher.h"
 
 #include <QtDockWidget.h>
 #include <QtFlexWidget.h>
@@ -216,7 +218,8 @@ void MainWidget::loadLayout()
 
 void MainWidget::onDockEidgetCreated(DockWidget *widget)
 {
-	if (widget->windowTitle() == "内存映射")
+    auto const& title = widget->windowTitle();
+	if (title == "内存映射")
 	{
 		auto table = new QTableView(widget);
 		table->setModel(m_memoryMapModel);
@@ -224,7 +227,7 @@ void MainWidget::onDockEidgetCreated(DockWidget *widget)
 		table->setEditTriggers(QAbstractItemView::NoEditTriggers);
 		widget->attachWidget(table);
 	}
-	else if (widget->windowTitle() == "输出")
+	else if (title == "输出")
 	{
         auto log_view = new QTableView(this);
         log_view->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -233,12 +236,17 @@ void MainWidget::onDockEidgetCreated(DockWidget *widget)
         log_view->setModel(m_logModel);
         widget->attachWidget(log_view);
 	}
-	else if (widget->windowTitle() == "寄存器")
+	else if (title == "寄存器")
 	{
 		auto view = new QTreeView(widget);
 		view->setModel(m_registerModel);
 		widget->attachWidget(view);
 	}
+    else if (title.contains("反汇编-"))
+    {
+        auto view = new DisasmView(widget);
+        widget->attachWidget(view);
+    }
 	else
 	{
 		widget->attachWidget(new QTextEdit(widget->windowTitle(), widget));
@@ -284,6 +292,7 @@ void MainWidget::onFileOpen()
 	}
 
 	m_debugCore = new DebugCore;
+    EventDispatcher::instance()->setDebugCore(m_debugCore);
 	connect(m_debugCore, &DebugCore::memoryMapRefreshed,[this](std::vector<MemoryRegion>& regions)
 	{
 		m_memoryMapModel->setRowCount(regions.size());

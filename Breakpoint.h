@@ -4,12 +4,13 @@
 #include <cstdint>
 
 class DebugCore;
-class BreakPoint
+
+class Breakpoint
 {
 public:
-    explicit BreakPoint(DebugCore* debugCore);
-    BreakPoint(const BreakPoint&) = delete;
-    BreakPoint(BreakPoint&&) = default;
+    explicit Breakpoint(DebugCore* debugCore);
+    Breakpoint(const Breakpoint&) = delete;
+    Breakpoint(Breakpoint&&) = default;
 
     uint64_t address() const
     {

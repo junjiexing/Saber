@@ -15,7 +15,7 @@
 #include <QObject>
 
 #include "Common.h"
-#include "BreakPoint.h"
+#include "Breakpoint.h"
 
 
 class DebugProcess;

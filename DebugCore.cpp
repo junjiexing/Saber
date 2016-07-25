@@ -1,5 +1,6 @@
 #include "DebugCore.h"
 #include "TargetException.h"
+#include "EventDispatcher.h"
 #include "Log.h"
 
 #include <vector>
@@ -64,7 +65,7 @@ DebugCore::~DebugCore()
 
 void DebugCore::refreshMemoryMap()
 {
-    mach_vm_address_t start = 1;
+    mach_vm_address_t start = 0;
     do
     {
         mach_vm_size_t size = 0;
@@ -79,7 +80,6 @@ void DebugCore::refreshMemoryMap()
             break;
         }
 
-        //outputMessage(QString("Start: %1").arg(start, 0, 16), MessageType::Info);
         bool needAdd = true;
         if (!m_memoryRegions.empty())
         {
@@ -107,6 +107,36 @@ void DebugCore::refreshMemoryMap()
     } while (start != 0);
 
     emit memoryMapRefreshed(m_memoryRegions);
+}
+
+bool DebugCore::findRegion(uint64_t address, uint64_t &start, uint64_t &size)
+{
+    refreshMemoryMap();
+    for (auto region : m_memoryRegions)
+    {
+        if (region.start <= address && (region.start + region.size) >= address)
+        {
+            start = region.start;
+            size = region.size;
+            return true;
+        }
+    }
+
+    mach_vm_address_t _start = address;
+    mach_vm_size_t _size = 0;
+    natural_t depth = 0;
+    vm_region_submap_short_info_data_64_t info;
+    mach_msg_type_number_t count = VM_REGION_SUBMAP_SHORT_INFO_COUNT_64;
+
+    if (mach_vm_region_recurse(m_task, &_start, &_size,
+       &depth, (vm_region_recurse_info_t)&info, &count) != KERN_SUCCESS)
+    {
+        return false;
+    }
+
+    start = _start;
+    size = _size;
+    return true;
 }
 
 bool DebugCore::readMemory(mach_vm_address_t address, void* buffer, mach_vm_size_t size)
@@ -228,16 +258,8 @@ mach_vm_address_t DebugCore::getEntryPoint()
     return 0;
 }
 
-Register DebugCore::getAllRegisterState(pid_t pid)
+Register DebugCore::getAllRegisterState(task_t thread)
 {
-    mach_port_name_t task;
-    kern_return_t err = task_for_pid(mach_task_self(), pid, &task);
-    if (err != KERN_SUCCESS)
-    {
-        log(QString("task_for_pid() error: \"%1\" 获取所有寄存器状态失败。").arg(mach_error_string(err)), LogType::Error);
-        return {};
-    }
-
 //          /* Suspend the target process */
 //          err = task_suspend(task);
 //          if (err != KERN_SUCCESS) {
@@ -245,23 +267,20 @@ Register DebugCore::getAllRegisterState(pid_t pid)
 //            exit(EXIT_FAILURE);
 //          }
 
-      /* Get all threads in the specified task */
-    thread_act_port_array_t threadList;
-    mach_msg_type_number_t threadCount;
-    err = task_threads(task, &threadList, &threadCount);
-    if (err != KERN_SUCCESS)
-    {
-        log(QString("task_threads() error: \"%1\" 获取所有寄存器状态失败。").arg(mach_error_string(err)), LogType::Error);
-        return {};
-    }
+//      /* Get all threads in the specified task */
+//    thread_act_port_array_t threadList;
+//    mach_msg_type_number_t threadCount;
+//    auto err = task_threads(thread, &threadList, &threadCount);
+//    if (err != KERN_SUCCESS)
+//    {
+//        log(QString("task_threads() error: \"%1\" 获取所有寄存器状态失败。").arg(mach_error_string(err)), LogType::Error);
+//        return {};
+//    }
 
     /* Get the thread state for the first thread */
-    x86_thread_state_t state;
-    mach_msg_type_number_t stateCount = x86_THREAD_STATE_COUNT;
-    err = thread_get_state(threadList[0],
-                     x86_THREAD_STATE,
-                     (thread_state_t)&state,
-                     &stateCount);
+    x86_thread_state64_t state;
+    mach_msg_type_number_t stateCount = x86_THREAD_STATE64_COUNT;
+    auto err = thread_get_state(thread, x86_THREAD_STATE64, (thread_state_t)&state, &stateCount);
     if (err != KERN_SUCCESS)
     {
         log(QString("thread_get_state() error: \"%1\" 获取所有寄存器状态失败。").arg(mach_error_string(err)), LogType::Error);
@@ -269,27 +288,27 @@ Register DebugCore::getAllRegisterState(pid_t pid)
     }
 
     Register regs;
-    regs.cs = state.uts.ts64.__cs;
-    regs.fs = state.uts.ts64.__fs;
-    regs.gs = state.uts.ts64.__gs;
-    regs.r8 = state.uts.ts64.__r8;
-    regs.r9 = state.uts.ts64.__r9;
-    regs.r10 = state.uts.ts64.__r10;
-    regs.r11 = state.uts.ts64.__r11;
-    regs.r12 = state.uts.ts64.__r12;
-    regs.r13 = state.uts.ts64.__r13;
-    regs.r14 = state.uts.ts64.__r14;
-    regs.r15 = state.uts.ts64.__r15;
-    regs.rax = state.uts.ts64.__rax;
-    regs.rbx = state.uts.ts64.__rbx;
-    regs.rcx = state.uts.ts64.__rcx;
-    regs.rdx = state.uts.ts64.__rdx;
-    regs.rbp = state.uts.ts64.__rbp;
-    regs.rdi = state.uts.ts64.__rdi;
-    regs.rsi = state.uts.ts64.__rsi;
-    regs.rsp = state.uts.ts64.__rsp;
-    regs.rip = state.uts.ts64.__rip;
-    regs.rflags = state.uts.ts64.__rflags;
+    regs.cs = state.__cs;
+    regs.fs = state.__fs;
+    regs.gs = state.__gs;
+    regs.r8 = state.__r8;
+    regs.r9 = state.__r9;
+    regs.r10 = state.__r10;
+    regs.r11 = state.__r11;
+    regs.r12 = state.__r12;
+    regs.r13 = state.__r13;
+    regs.r14 = state.__r14;
+    regs.r15 = state.__r15;
+    regs.rax = state.__rax;
+    regs.rbx = state.__rbx;
+    regs.rcx = state.__rcx;
+    regs.rdx = state.__rdx;
+    regs.rbp = state.__rbp;
+    regs.rdi = state.__rdi;
+    regs.rsi = state.__rsi;
+    regs.rsp = state.__rsp;
+    regs.rip = state.__rip;
+    regs.rflags = state.__rflags;
 
     return regs;
 }
@@ -328,19 +347,19 @@ void DebugCore::getAllSegment()
     }
 }
 
-bool DebugCore::addBreakPoint(uint64_t address, bool enabled, bool isHardware)
+bool DebugCore::addBreakpoint(uint64_t address, bool enabled, bool isHardware)
 {
     assert(!isHardware);    //TODO:
+    assert(!findBreakpoint(address));
 
-    auto bp = std::make_shared<BreakPoint>(this);
+    auto bp = std::make_shared<Breakpoint>(this);
     bp->m_address = address;
     if (!bp->setEnabled(enabled))
     {
         return false;
     }
 
-
-    m_breakPoints.emplace_back(bp);
+    m_breakpoints.emplace_back(bp);
     return true;
 }
 
@@ -426,13 +445,83 @@ void DebugCore::onDebugLoopFinished(DebugProcess *p)
 
 bool DebugCore::handleException(ExceptionInfo const&info)
 {
-    log(QString("Exception: %1").arg(info.exceptionType), LogType::Info);
+    auto str = QString("Exception: %1, Data size %2").arg(info.exceptionType).arg(info.exceptionData.size());
+    for (auto it : info.exceptionData)
+    {
+        str += "," + QString::number(it, 16);
+    }
+
+    log(str, LogType::Info);
+
+    emit refreshRegister(getAllRegisterState(info.threadPort));
     switch (info.exceptionType)
     {
         case EXC_SOFTWARE:
-            addBreakPoint(getEntryPoint());
-            ptrace(PT_CONTINUE, m_pid, (caddr_t)1, 0);
+            if (info.exceptionData.size() == 2 && info.exceptionData[0] == EXC_SOFT_SIGNAL)
+            {
+                //调试目标的signal, data[1]为signal的值
+                if (info.exceptionData[1] == SIGTRAP)
+                {
+                    //当子进程执行exec系列函数时会产生sigtrap信号
+                    //TODO: 有多个子进程应该如何处理?
+                    addOrEnableBreakpoint(getEntryPoint());
+                }
+                ptrace(PT_CONTINUE, m_pid, (caddr_t)1, 0);
+            }
+            else if (info.exceptionData.size() >=1 && info.exceptionData[0] == 1)
+            {
+                //lldb中将这种情况当做breakpoint进行处理的
+                //TODO: handleBreakpoint();
+            }
+            return false;
+        case EXC_BREAKPOINT:
+        {
+            //TODO: handleBreakpoint();
+            EventDispatcher::instance()->setDisasmAddress(getEntryPoint());
+            return waitForContinue();
+
+        }
+        case EXC_BAD_ACCESS:
+            return false;
+        default:
             return false;
     }
     return false;
+}
+
+DebugCore::BreakpointPtr DebugCore::findBreakpoint(uint64_t address)
+{
+    for (auto it : m_breakpoints)
+    {
+        if (it->address() == address)
+        {
+            return it;
+        }
+    }
+
+    return nullptr;
+}
+
+bool DebugCore::addOrEnableBreakpoint(uint64_t address, bool isHardware)
+{
+    auto bp = findBreakpoint(address);
+    if (bp)
+    {
+        return bp->setEnabled(true);
+    }
+
+    return addBreakpoint(address, true, isHardware);
+}
+
+void DebugCore::continueDebug(bool notForwardExc)
+{
+    m_notFprwardExc = notForwardExc;
+    m_continueCV.notify_all();
+}
+
+bool DebugCore::waitForContinue()
+{
+    std::unique_lock<std::mutex> lock(m_continueMtx);
+    m_continueCV.wait(lock);
+    return m_notFprwardExc;
 }

@@ -1,8 +1,8 @@
-#include "BreakPoint.h"
+#include "Breakpoint.h"
 #include "DebugCore.h"
 #include "Log.h"
 
-BreakPoint::BreakPoint(DebugCore *debugCore)
+Breakpoint::Breakpoint(DebugCore *debugCore)
     :m_debugCore(debugCore), m_address(0),
       m_orgByte(0), m_enabled(false), m_isHardware(false)
 {
@@ -11,7 +11,7 @@ BreakPoint::BreakPoint(DebugCore *debugCore)
 
 static const uint8_t bpData = 0xCC;
 
-bool BreakPoint::setEnabled(bool enabled)
+bool Breakpoint::setEnabled(bool enabled)
 {
     if (enabled == m_enabled)
     {

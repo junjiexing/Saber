@@ -5,6 +5,7 @@
 #include <thread>
 #include <memory>
 #include <string>
+#include <condition_variable>
 
 #include <sys/types.h>
 #include <unistd.h>
@@ -15,7 +16,7 @@
 #include <QObject>
 
 #include "Common.h"
-#include "BreakPoint.h"
+#include "Breakpoint.h"
 #include "TargetException.h"
 
 
@@ -29,18 +30,22 @@ public:
     ~DebugCore();
 
     void refreshMemoryMap();
+    bool findRegion(uint64_t address, uint64_t& start, uint64_t& size);
     bool readMemory(mach_vm_address_t address, void* buffer, mach_vm_size_t size);
     bool writeMemory(mach_vm_address_t address, const void* buffer, mach_vm_size_t size);
 
     bool debugNew(const QString &path, const QString &args);
+    void continueDebug(bool notForwardExc);
     mach_vm_address_t findBaseAddress();
     mach_vm_address_t getEntryPoint();
-    Register getAllRegisterState(pid_t pid);
+    Register getAllRegisterState(task_t thread);
 
     void getAllSegment();
 
-    bool addBreakPoint(uint64_t address, bool enabled = true, bool isHardware = false);
-
+    using BreakpointPtr = std::shared_ptr<Breakpoint>;
+    bool addBreakpoint(uint64_t address, bool enabled = true, bool isHardware = false);
+    bool addOrEnableBreakpoint(uint64_t address, bool isHardware = false);
+    BreakpointPtr findBreakpoint(uint64_t address);
 signals:
     void memoryMapRefreshed(std::vector<MemoryRegion>& regions);
     void debugLoopFinished(DebugProcess* p);
@@ -60,10 +65,15 @@ private:
     pid_t m_currPid = 0;
     mach_port_t m_task;
 
-    std::vector<std::shared_ptr<BreakPoint>> m_breakPoints;
+    std::vector<BreakpointPtr> m_breakpoints;
 
     std::vector<Segment> m_segments;
 
     TargetException m_targetException;
+
+    bool waitForContinue();
+    std::mutex m_continueMtx;
+    std::condition_variable m_continueCV;
+    bool m_notFprwardExc;
 };
 

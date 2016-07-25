@@ -26,7 +26,7 @@ set(SOURCE_FILES
         QtFlex5/QtFlexWidget.cpp
         QtFlex5/QtFlex.qrc
 
-        BreakPoint.cpp
+        Breakpoint.cpp
         DebugCore.cpp
         DisasmView.cpp
         libasmx64.cpp
@@ -34,7 +34,7 @@ set(SOURCE_FILES
 
         mach_excServer.c
         mach_excUser.c
-        TargetException.cpp TargetException.h Log.cpp Log.h)
+        TargetException.cpp TargetException.h Log.cpp Log.h EventDispatcher.cpp EventDispatcher.h)
 
 include_directories(
         ${Qt5Widgets_INCLUDES}

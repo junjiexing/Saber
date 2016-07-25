@@ -24,8 +24,8 @@ extern "C" kern_return_t catch_mach_exception_raise_state_identity(
         mach_msg_type_number_t old_stateCnt, thread_state_t new_state, mach_msg_type_number_t *new_stateCnt)
 {
     log("In catch_mach_exception_raise_state_identity");
-    //mach_port_deallocate (mach_task_self (), task_port);
-    //mach_port_deallocate (mach_task_self (), thread_port);
+    mach_port_deallocate (mach_task_self (), task_port);
+    mach_port_deallocate (mach_task_self (), thread_port);
 
     return KERN_FAILURE;
 }
@@ -205,10 +205,10 @@ TargetException::onCatchMachExceptionRaise(
 
 kern_return_t TargetException::forwardException(
         mach_port_t thread, mach_port_t task, exception_type_t exception,
-        mach_exception_data_t data, mach_msg_type_number_t data_count)
+        mach_exception_data_t data, mach_msg_type_number_t dataCount)
 {
-    thread_state_data_t thread_state = {};
-    mach_msg_type_number_t thread_state_count = THREAD_STATE_MAX;
+    thread_state_data_t threadState = {};
+    mach_msg_type_number_t threadStateCount = THREAD_STATE_MAX;
 
     int i;
     for(i=0; i < m_oldExcPorts.count; ++i)
@@ -227,10 +227,12 @@ kern_return_t TargetException::forwardException(
     exception_behavior_t behavior = m_oldExcPorts.behaviors[i];
     thread_state_flavor_t flavor = m_oldExcPorts.flavors[i];
 
+    //log(QString("exception index: %1, exception count: %2, port: %3, behavior: %4, flavor: %5").arg(i).arg(m_oldExcPorts.count).arg(port).arg(behavior).arg(flavor));
+
     kern_return_t kr;
     if(behavior != EXCEPTION_DEFAULT)
     {
-        kr = thread_get_state(thread, flavor, thread_state, &thread_state_count);
+        kr = thread_get_state(thread, flavor, threadState, &threadStateCount);
         if(kr != KERN_SUCCESS)
         {
             log(QString("thread_get_state failde: %1").arg(mach_error_string(kr)), LogType::Error);
@@ -241,27 +243,26 @@ kern_return_t TargetException::forwardException(
     switch(behavior)
     {
         case EXCEPTION_DEFAULT:
-            kr = mach_exception_raise(port, thread, task, exception, data, data_count);
+            kr = mach_exception_raise(port, thread, task, exception, data, dataCount);
             break;
         case EXCEPTION_STATE:
-            kr = mach_exception_raise_state(m_exceptionPort, exception, data,
-                    data_count, &flavor, thread_state, thread_state_count, thread_state, &thread_state_count);
+            kr = mach_exception_raise_state(port, exception, data,
+                    dataCount, &flavor, threadState, threadStateCount, threadState, &threadStateCount);
             break;
         case EXCEPTION_STATE_IDENTITY:
             kr = mach_exception_raise_state_identity(port, thread, task, exception, data,
-                    data_count, &flavor, thread_state, thread_state_count, thread_state, &thread_state_count);
+                    dataCount, &flavor, threadState, threadStateCount, threadState, &threadStateCount);
             break;
         default:
-            kr = KERN_FAILURE; /* make gcc happy */
-            log(QString("forward_exception: unknown behavior: %1").arg(behavior), LogType::Error);
-            break;
+            log(QString("forwardException: unknown behavior: %1").arg(behavior), LogType::Info);
+            return KERN_FAILURE; /* make gcc happy */
     }
 
     if(behavior != EXCEPTION_DEFAULT)
     {
-        kr = thread_set_state(thread, flavor, thread_state, thread_state_count);
+        kr = thread_set_state(thread, flavor, threadState, threadStateCount);
         if(kr != KERN_SUCCESS)
-            log(QString("thread_set_state failed: %1").arg(behavior), LogType::Error);
+            log(QString("thread_set_state failed: %1").arg(mach_error_string(kr)), LogType::Error);
     }
 
     return kr;

@@ -27,7 +27,7 @@ public:
             mach_exception_data_t excData, mach_msg_type_number_t excDataCount);
     kern_return_t forwardException(mach_port_t thread,
                                    mach_port_t task, exception_type_t exception,
-                                   mach_exception_data_t data, mach_msg_type_number_t data_count);
+                                   mach_exception_data_t data, mach_msg_type_number_t dataCount);
     static TargetException* getSelfByTask(task_t task);
 
 private:
@@ -39,10 +39,10 @@ private:
     struct
     {
         mach_msg_type_number_t count;
-        exception_mask_t      masks[16];
-        exception_handler_t   ports[16];
-        exception_behavior_t  behaviors[16];
-        thread_state_flavor_t flavors[16];
+        exception_mask_t      masks[EXC_TYPES_COUNT];
+        exception_handler_t   ports[EXC_TYPES_COUNT];
+        exception_behavior_t  behaviors[EXC_TYPES_COUNT];
+        thread_state_flavor_t flavors[EXC_TYPES_COUNT];
     } m_oldExcPorts;
 
     mach_port_name_t m_exceptionPort;
