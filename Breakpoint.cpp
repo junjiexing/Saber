@@ -13,6 +13,7 @@ static const uint8_t bpData = 0xCC;
 
 bool Breakpoint::setEnabled(bool enabled)
 {
+    log(QString("bp set enabled: %1").arg(enabled));
     if (enabled == m_enabled)
     {
         return true;
@@ -33,9 +34,11 @@ bool Breakpoint::setEnabled(bool enabled)
             return false;
         }
 
+        m_enabled = true;
         return true;
     }
 
+    log("disable bp");
     uint8_t tmp;
     bool r = m_debugCore->readMemory(m_address, &tmp, 1);
     if (!r)
@@ -57,6 +60,6 @@ bool Breakpoint::setEnabled(bool enabled)
         return false;
     }
 
+    m_enabled = false;
     return true;
-
 }

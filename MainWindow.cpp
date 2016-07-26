@@ -48,7 +48,13 @@ MainWidget::MainWidget(QWidget *parent)
 	menuBar()->addMenu(menu);
 
 	menu = new QMenu("调试",this);
-	addAction("debug.run", menu->addAction("运行", this, []{}));
+	addAction("debug.run", menu->addAction("运行", this, [this]
+	{
+		if (m_debugCore)
+		{
+			m_debugCore->continueDebug(true);
+		}
+	}));
 	addAction("debug.stepOver", menu->addAction("单步步过", this, []{}));
 	addAction("debug.stepIn", menu->addAction("单步步入", this, []{}));
 	menuBar()->addMenu(menu);

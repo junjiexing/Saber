@@ -477,9 +477,24 @@ bool DebugCore::handleException(ExceptionInfo const&info)
         case EXC_BREAKPOINT:
         {
             //TODO: handleBreakpoint();
-            EventDispatcher::instance()->setDisasmAddress(getEntryPoint());
-            return waitForContinue();
+            uint64_t bpAddr = getAllRegisterState(info.threadPort).rip - 1;
+            EventDispatcher::instance()->setDisasmAddress(bpAddr);
+            bool ret = waitForContinue();
+            auto bp = findBreakpoint(bpAddr);
+            if (!bp->setEnabled(false))
+            {
+                log("disable breakpoint failed", LogType::Error);
+            }
 
+            {
+                x86_thread_state64_t state;
+                mach_msg_type_number_t stateCount = x86_THREAD_STATE64_COUNT;
+                thread_get_state(info.threadPort, x86_THREAD_STATE64, (thread_state_t)&state, &stateCount);
+                --state.__rip;
+                thread_set_state(info.threadPort, x86_THREAD_STATE64, (thread_state_t)&state, stateCount);
+            }
+            ptrace(PT_CONTINUE, m_pid, (caddr_t)1, 0);
+            return true;
         }
         case EXC_BAD_ACCESS:
             return false;
