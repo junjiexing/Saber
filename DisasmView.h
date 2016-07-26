@@ -32,6 +32,8 @@ private:
     std::vector<uint64_t> m_insnStart;
 
     uint64_t m_hilightLine;
+    uint64_t m_currentAddress;
+    bool m_foundIndex;
 
     DebugCore* m_debugCore;
     // QWidget interface
@@ -39,5 +41,7 @@ protected:
     void mousePressEvent(QMouseEvent *event) override;
 
     virtual bool event(QEvent *event) override;
+
+    virtual void wheelEvent(QWheelEvent *event) override;
 };
 

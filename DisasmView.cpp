@@ -17,29 +17,26 @@ DisasmView::DisasmView(QWidget *parent)
 
 void DisasmView::gotoAddress(uint64_t address)
 {
-    log(QString("In DisasmView::gotoAddress: %1").arg(address,0,16));
+    m_currentAddress = address;
     if (!(address >= m_regionStart && address <= (m_regionStart + m_regionSize)))
     {
         setRegion(address);
     }
 
-    bool found = false;
+    m_foundIndex = false;
     std::size_t i = 0;
-    log(QString("In DisasmView::gotoAddress, m_insnStart.size = %1").arg(m_insnStart.size()));
     for (; i < m_insnStart.size(); ++i)
     {
-        if (m_insnStart[i] == address)
+        auto tmp = m_insnStart[i];
+        if (tmp == address)
         {
-            found = true;
+            m_foundIndex = true;
             break;
         }
-    }
-    if (!found)
-    {
-        //FIXME:单独处理
-        //到了某个指令中间的地方..
-        log("到了某个指令中间的地方");
-        return;
+        else if (tmp > address)
+        {
+            break;
+        }
     }
 
     verticalScrollBar()->setValue(i);
@@ -90,7 +87,15 @@ void DisasmView::paintEvent(QPaintEvent * e)
     QPainter p(viewport());
 
     x64dis decoder;
-    uint64_t addr = m_insnStart[verticalScrollBar()->value()];
+    uint64_t addr = 0;
+    if (!m_foundIndex)
+    {
+        addr = m_currentAddress;
+    }
+    else
+    {
+        addr = m_insnStart[verticalScrollBar()->value()];
+    }
 
     int h = viewport()->fontMetrics().height();
     for (int i = 0; i < viewport()->height(); i += h)
@@ -101,6 +106,7 @@ void DisasmView::paintEvent(QPaintEvent * e)
         }
         int size = std::min(15ull, m_regionStart + m_regionSize - addr);
         uint8_t buff[15];
+        //FIXME:判断读取是否成功
         m_debugCore->readMemory(addr, buff, size);
         x86dis_insn* insn = decoder.decode(buff, size, addr);
         const char* insnStr = decoder.str(insn, DIS_STYLE_HEX_ASMSTYLE | DIS_STYLE_HEX_UPPERCASE | DIS_STYLE_HEX_NOZEROPAD | DIS_STYLE_SIGNED | X86DIS_STYLE_EXPLICIT_MEMSIZE);
@@ -179,4 +185,10 @@ bool DisasmView::event(QEvent *event)
         return true;
     }
     return QAbstractScrollArea::event(event);
+}
+
+void DisasmView::wheelEvent(QWheelEvent *event)
+{
+    m_foundIndex = true;
+    QAbstractScrollArea::wheelEvent(event);
 }
