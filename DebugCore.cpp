@@ -260,23 +260,6 @@ mach_vm_address_t DebugCore::getEntryPoint()
 
 Register DebugCore::getAllRegisterState(task_t thread)
 {
-//          /* Suspend the target process */
-//          err = task_suspend(task);
-//          if (err != KERN_SUCCESS) {
-//            fprintf(stderr, "task_suspend() failed\n");
-//            exit(EXIT_FAILURE);
-//          }
-
-//      /* Get all threads in the specified task */
-//    thread_act_port_array_t threadList;
-//    mach_msg_type_number_t threadCount;
-//    auto err = task_threads(thread, &threadList, &threadCount);
-//    if (err != KERN_SUCCESS)
-//    {
-//        log(QString("task_threads() error: \"%1\" 获取所有寄存器状态失败。").arg(mach_error_string(err)), LogType::Error);
-//        return {};
-//    }
-
     /* Get the thread state for the first thread */
     x86_thread_state64_t state;
     mach_msg_type_number_t stateCount = x86_THREAD_STATE64_COUNT;
@@ -471,37 +454,31 @@ bool DebugCore::handleException(ExceptionInfo const&info)
             else if (info.exceptionData.size() >=1 && info.exceptionData[0] == 1)
             {
                 //lldb中将这种情况当做breakpoint进行处理的
-                //TODO: handleBreakpoint();
+                return handleBreakpoint(info);
             }
             return false;
         case EXC_BREAKPOINT:
         {
-            //TODO: handleBreakpoint();
-            uint64_t bpAddr = getAllRegisterState(info.threadPort).rip - 1;
-            EventDispatcher::instance()->setDisasmAddress(bpAddr);
-            bool ret = waitForContinue();
-            auto bp = findBreakpoint(bpAddr);
-            if (!bp->setEnabled(false))
-            {
-                log("disable breakpoint failed", LogType::Error);
-            }
-
-            {
-                x86_thread_state64_t state;
-                mach_msg_type_number_t stateCount = x86_THREAD_STATE64_COUNT;
-                thread_get_state(info.threadPort, x86_THREAD_STATE64, (thread_state_t)&state, &stateCount);
-                --state.__rip;
-                thread_set_state(info.threadPort, x86_THREAD_STATE64, (thread_state_t)&state, stateCount);
-            }
-            ptrace(PT_CONTINUE, m_pid, (caddr_t)1, 0);
-            return true;
+            return handleBreakpoint(info);
         }
         case EXC_BAD_ACCESS:
+        case EXC_BAD_INSTRUCTION:
+        case EXC_ARITHMETIC:
+        case EXC_EMULATION:
+        case EXC_SYSCALL:
+        case EXC_MACH_SYSCALL:
+        case EXC_RPC_ALERT:
+        case EXC_CRASH:
+        case EXC_RESOURCE:
+        case EXC_GUARD:
+        case EXC_CORPSE_NOTIFY:
+            EventDispatcher::instance()->setDisasmAddress(getAllRegisterState(info.threadPort).rip);
+            waitForContinue();
+            //TODO:如果用户处理了异常应该返回true阻止程序自己处理异常
             return false;
         default:
             return false;
     }
-    return false;
 }
 
 DebugCore::BreakpointPtr DebugCore::findBreakpoint(uint64_t address)
@@ -528,15 +505,45 @@ bool DebugCore::addOrEnableBreakpoint(uint64_t address, bool isHardware)
     return addBreakpoint(address, true, isHardware);
 }
 
-void DebugCore::continueDebug(bool notForwardExc)
+void DebugCore::continueDebug()
 {
-    m_notFprwardExc = notForwardExc;
     m_continueCV.notify_all();
 }
 
-bool DebugCore::waitForContinue()
+void DebugCore::waitForContinue()
 {
     std::unique_lock<std::mutex> lock(m_continueMtx);
     m_continueCV.wait(lock);
-    return m_notFprwardExc;
+}
+
+bool DebugCore::handleBreakpoint(ExceptionInfo const &info)
+{
+    x86_thread_state64_t state;
+    mach_msg_type_number_t stateCount = x86_THREAD_STATE64_COUNT;
+    auto err = thread_get_state(info.threadPort, x86_THREAD_STATE64, (thread_state_t)&state, &stateCount);
+    if (err != KERN_SUCCESS)
+    {
+        log(QString("In handleBreakpoint: thread_get_state failed: %1").arg(mach_error_string(err)), LogType::Error);
+        return false;
+    }
+    --state.__rip;
+
+    auto bp = findBreakpoint(state.__rip);
+    if (!bp)
+    {
+        log(QString("Un known breakpoint at 0x%1").arg(state.__rip), LogType::Warning);
+        ++state.__rip; //TODO:这里会导致反汇编窗口显示int3指令之后的一条指令,反汇编窗口应当将int3指令显示出来
+    }
+    else if (!bp->setEnabled(false))
+    {
+        log("disable breakpoint failed", LogType::Error);
+        //TODO: 询问用户是将异常传递给程序还是从断点指令下一条指令执行
+    }
+
+    EventDispatcher::instance()->setDisasmAddress(state.__rip);
+    waitForContinue();
+
+    thread_set_state(info.threadPort, x86_THREAD_STATE64, (thread_state_t)&state, stateCount);
+
+    return ptrace(PT_CONTINUE, m_pid, (caddr_t)1, 0) == -1;
 }

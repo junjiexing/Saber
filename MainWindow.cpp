@@ -52,7 +52,11 @@ MainWidget::MainWidget(QWidget *parent)
 	{
 		if (m_debugCore)
 		{
-			m_debugCore->continueDebug(true);
+			m_debugCore->continueDebug();
+		}
+		else
+		{
+			QMessageBox::warning(this, "错误", "请先选择要调试的程序");
 		}
 	}));
 	addAction("debug.stepOver", menu->addAction("单步步过", this, []{}));

@@ -35,7 +35,7 @@ public:
     bool writeMemory(mach_vm_address_t address, const void* buffer, mach_vm_size_t size);
 
     bool debugNew(const QString &path, const QString &args);
-    void continueDebug(bool notForwardExc);
+    void continueDebug();
     mach_vm_address_t findBaseAddress();
     mach_vm_address_t getEntryPoint();
     Register getAllRegisterState(task_t thread);
@@ -54,6 +54,8 @@ signals:
 private:
     void debugLoop();
     bool handleException(ExceptionInfo const& info);
+
+    bool handleBreakpoint(ExceptionInfo const& info);
 private slots:
     void onDebugLoopFinished(DebugProcess* p);
 private:
@@ -71,9 +73,8 @@ private:
 
     TargetException m_targetException;
 
-    bool waitForContinue();
+    void waitForContinue();
     std::mutex m_continueMtx;
     std::condition_variable m_continueCV;
-    bool m_notFprwardExc;
 };
 
