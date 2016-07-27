@@ -36,6 +36,7 @@ public:
 
     bool debugNew(const QString &path, const QString &args);
     void continueDebug();
+    void stepIn();
     mach_vm_address_t findBaseAddress();
     mach_vm_address_t getEntryPoint();
     Register getAllRegisterState(task_t thread);
@@ -64,7 +65,7 @@ private:
 //    QString m_args;
 
     pid_t m_pid;
-    pid_t m_currPid = 0;
+	mach_port_t m_currThread = 0;
     mach_port_t m_task;
 
     std::vector<BreakpointPtr> m_breakpoints;
@@ -76,5 +77,8 @@ private:
     void waitForContinue();
     std::mutex m_continueMtx;
     std::condition_variable m_continueCV;
+
+	bool m_stepIn = false;
+	bool doContinueDebug();
 };
 

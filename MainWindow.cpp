@@ -60,7 +60,17 @@ MainWidget::MainWidget(QWidget *parent)
 		}
 	}));
 	addAction("debug.stepOver", menu->addAction("单步步过", this, []{}));
-	addAction("debug.stepIn", menu->addAction("单步步入", this, []{}));
+	addAction("debug.stepIn", menu->addAction("单步步入", this, [this]
+	{
+		if (m_debugCore)
+		{
+		  m_debugCore->stepIn();
+		}
+		else
+		{
+		  QMessageBox::warning(this, "错误", "请先选择要调试的程序");
+		}
+	}));
 	menuBar()->addMenu(menu);
 
 	menu = new QMenu("工具",this);

@@ -146,7 +146,7 @@ bool DebugCore::readMemory(mach_vm_address_t address, void* buffer, mach_vm_size
     kern_return_t kr = mach_vm_read_overwrite(m_task, address, size, (mach_vm_address_t)buffer, &nread);
     if (kr != KERN_SUCCESS)
     {
-        log(QString("mach_vm_read_overwrite failed with error: ").append(mach_error_string(kr)), LogType::Error);
+        log(QString("mach_vm_read_overwrite failed at address: 0x%1 with error: 2").arg(address, 0, 16).arg(mach_error_string(kr)), LogType::Error);
         return false;
     }
     else if (nread != size)
@@ -317,13 +317,6 @@ void DebugCore::getAllSegment()
             tmp.fileoff = seg->fileoff;
             tmp.filesize = seg->filesize;
             m_segments.emplace_back(tmp);
-//            outputMessage(QString("name: %1 vmaddr: 0x%2 vmsize: 0x%3 fileoff: 0x%4 filesize: 0x%5")
-//                          .arg(tmp.segname)
-//                          .arg(QString::number(tmp.vmaddr,16))
-//                          .arg(QString::number(tmp.vmsize,16))
-//                          .arg(QString::number(tmp.fileoff,16))
-//                          .arg(QString::number(tmp.filesize,16)),
-//                          MessageType::Info);
         }
 
         p += cmd->cmdsize;
@@ -435,6 +428,7 @@ bool DebugCore::handleException(ExceptionInfo const&info)
     }
 
     log(str, LogType::Info);
+    m_currThread = info.threadPort;
 
     emit refreshRegister(getAllRegisterState(info.threadPort));
     switch (info.exceptionType)
@@ -507,6 +501,7 @@ bool DebugCore::addOrEnableBreakpoint(uint64_t address, bool isHardware)
 
 void DebugCore::continueDebug()
 {
+    m_stepIn = false;
     m_continueCV.notify_all();
 }
 
@@ -523,9 +518,19 @@ bool DebugCore::handleBreakpoint(ExceptionInfo const &info)
     auto err = thread_get_state(info.threadPort, x86_THREAD_STATE64, (thread_state_t)&state, &stateCount);
     if (err != KERN_SUCCESS)
     {
-        log(QString("In handleBreakpoint: thread_get_state failed: %1").arg(mach_error_string(err)), LogType::Error);
+        log(QString("In handleBreakpoint, thread_get_state failed: %1").arg(mach_error_string(err)), LogType::Error);
         return false;
     }
+    log(QString("rip: 0x%1").arg(state.__rip, 0, 16));
+
+    if (info.exceptionData[0] == 1)
+    {
+        EventDispatcher::instance()->setDisasmAddress(state.__rip);
+        waitForContinue();
+
+        return doContinueDebug();
+    }
+
     --state.__rip;
 
     auto bp = findBreakpoint(state.__rip);
@@ -543,7 +548,48 @@ bool DebugCore::handleBreakpoint(ExceptionInfo const &info)
     EventDispatcher::instance()->setDisasmAddress(state.__rip);
     waitForContinue();
 
-    thread_set_state(info.threadPort, x86_THREAD_STATE64, (thread_state_t)&state, stateCount);
+    err = thread_set_state(info.threadPort, x86_THREAD_STATE64, (thread_state_t)&state, stateCount);
+    if (err != KERN_SUCCESS)
+    {
+        log(QString("In handleBreakpoint, thread_set_state failed: %1").arg(mach_error_string(err)), LogType::Error);
+        return false;
+    }
+    return doContinueDebug();
+}
+
+void DebugCore::stepIn()
+{
+    m_stepIn = true;
+    m_continueCV.notify_all();
+}
+bool DebugCore::doContinueDebug()
+{
+    x86_thread_state64_t state;
+    mach_msg_type_number_t stateCount = x86_THREAD_STATE64_COUNT;
+    auto err = thread_get_state(m_currThread, x86_THREAD_STATE64, (thread_state_t)&state, &stateCount);
+    if (err != KERN_SUCCESS)
+    {
+        log(QString("In DebugCore::stepIn, thread_get_state failed: %1").arg(mach_error_string(err)), LogType::Error);
+        return false;
+    }
+
+    if (m_stepIn)
+    {
+        state.__rflags |= (1 << 8);
+    }
+    else
+    {
+        state.__rflags &= ~(1 << 8);
+    }
+
+    log(QString("RFLAGS: 0x%1").arg(state.__rflags, 0, 16));
+
+    err = thread_set_state(m_currThread, x86_THREAD_STATE64, (thread_state_t)&state, stateCount);
+    if (err != KERN_SUCCESS)
+    {
+        log(QString("In DebugCore::stepIn, thread_set_state failed: %1").arg(mach_error_string(err)), LogType::Error);
+        return false;
+    }
 
     return ptrace(PT_CONTINUE, m_pid, (caddr_t)1, 0) == -1;
 }

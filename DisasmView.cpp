@@ -40,6 +40,7 @@ void DisasmView::gotoAddress(uint64_t address)
     }
 
     verticalScrollBar()->setValue(i);
+	viewport()->update();
 }
 
 void DisasmView::setRegion(uint64_t address)
@@ -61,7 +62,11 @@ void DisasmView::analysis()
 {
     log(QString("in analysis: %1, %2").arg(m_regionStart,0,16).arg(m_regionSize,0,16));
     std::vector<uint8_t> buf(m_regionSize);
-    m_debugCore->readMemory(m_regionStart, buf.data(), buf.size());
+    if (!m_debugCore->readMemory(m_regionStart, buf.data(), buf.size()))
+    {
+        log("In DisasmView::analysis, readMemory failed", LogType::Warning);
+        return;
+    }
 
     uint64_t addr = m_regionStart;
     x64dis decoder;
