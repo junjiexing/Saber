@@ -146,12 +146,12 @@ bool DebugCore::readMemory(mach_vm_address_t address, void* buffer, mach_vm_size
     kern_return_t kr = mach_vm_read_overwrite(m_task, address, size, (mach_vm_address_t)buffer, &nread);
     if (kr != KERN_SUCCESS)
     {
-        log(QString("mach_vm_read_overwrite failed at address: 0x%1 with error: 2").arg(address, 0, 16).arg(mach_error_string(kr)), LogType::Error);
+        log(QString("mach_vm_read_overwrite failed at address: 0x%1 with error: %2").arg(address, 0, 16).arg(mach_error_string(kr)), LogType::Warning);
         return false;
     }
     else if (nread != size)
     {
-        log(QString("mach_vm_read_overwrite failed, requested size: %1 read: %2").arg(size).arg(nread), LogType::Error);
+        log(QString("mach_vm_read_overwrite failed, requested size: %1 read: %2").arg(size).arg(nread), LogType::Warning);
         return false;
     }
     return true;
@@ -168,7 +168,7 @@ bool DebugCore::writeMemory(mach_vm_address_t address, const void *buffer, mach_
     kern_return_t kr = mach_vm_region_recurse(m_task, &regionAddress, &regionSize, &depth, (vm_region_recurse_info_t)&info, &count);
     if (kr != KERN_SUCCESS)
     {
-        log(QString("写入内存失败，mach_vm_region_recurse：").append(mach_error_string(kr)), LogType::Error);
+        log(QString("写入内存失败，mach_vm_region_recurse：").append(mach_error_string(kr)), LogType::Warning);
         return 0;
     }
 
@@ -178,7 +178,7 @@ bool DebugCore::writeMemory(mach_vm_address_t address, const void *buffer, mach_
         kr = mach_vm_protect(m_task, address, size, 0, info.protection | VM_PROT_WRITE);
         if (kr != KERN_SUCCESS)
         {
-            log(QString("写入内存失败，mach_vm_protect：").append(mach_error_string(kr)), LogType::Error);
+            log(QString("写入内存失败，mach_vm_protect：").append(mach_error_string(kr)), LogType::Warning);
             return 0;
         }
     }
@@ -186,7 +186,7 @@ bool DebugCore::writeMemory(mach_vm_address_t address, const void *buffer, mach_
     kr = mach_vm_write(m_task, address, (vm_offset_t)buffer, size);
     if (kr != KERN_SUCCESS)
     {
-        log(QString("mach_vm_write() failed: %1, address: 0x%2").arg(mach_error_string(kr)).arg(QString::number(address, 16)), LogType::Error);
+        log(QString("mach_vm_write() failed: %1, address: 0x%2").arg(mach_error_string(kr)).arg(QString::number(address, 16)), LogType::Warning);
         return false;
     }
 
