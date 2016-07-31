@@ -33,11 +33,7 @@ MainWidget::MainWidget(QWidget *parent)
 	menuBar()->addMenu(menu);
 
 	menu = new QMenu("视图",this);
-	addAction("view.disasmView", menu->addAction("反汇编窗口", this, [this]
-	{
-		static int index = 0;
-		addDockWidget(Flex::FileView,QString("反汇编-%1").arg(++index),Flex::M,0,center);
-	}));
+	addAction("view.disasmView", menu->addAction("反汇编窗口", this, [this]{activeOrAddDockWidget(Flex::FileView,"反汇编",Flex::M,0,center);}));
 	addAction("view.memoryView", menu->addAction("内存窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"内存",Flex::B0,0,center);}));
 	addAction("view.registerView", menu->addAction("寄存器窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"寄存器",Flex::B0,0,center);}));
 	addAction("view.callstackView", menu->addAction("调用堆栈窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"调用堆栈",Flex::B0,0,center);}));
@@ -262,9 +258,11 @@ void MainWidget::onDockEidgetCreated(DockWidget *widget)
 		view->setModel(m_registerModel);
 		widget->attachWidget(view);
 	}
-    else if (title.contains("反汇编-"))
+    else if (title == "反汇编")
     {
         auto view = new DisasmView(widget);
+		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDebugCore, view, &DisasmView::setDebugCore);
+		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDisasmAddress, view, &DisasmView::gotoAddress);
         widget->attachWidget(view);
     }
 	else
@@ -312,8 +310,8 @@ void MainWidget::onFileOpen()
 	}
 
 	m_debugCore = new DebugCore;
-    EventDispatcher::instance()->setDebugCore(m_debugCore);
-	connect(m_debugCore, &DebugCore::memoryMapRefreshed,[this](std::vector<MemoryRegion>& regions)
+    emit EventDispatcher::instance()->setDebugCore(m_debugCore);
+	connect(EventDispatcher::instance(), &EventDispatcher::showMemoryMap, [this](std::vector<MemoryRegion> regions)
 	{
 		m_memoryMapModel->setRowCount(regions.size());
 		for (unsigned i = 0; i < regions.size(); ++i)
@@ -323,7 +321,7 @@ void MainWidget::onFileOpen()
 			m_memoryMapModel->setItem(i, 2, new QStandardItem(QString("%1").arg(regions[i].info.protection, 0, 16)));
 		}
 	});
-	connect(m_debugCore, &DebugCore::refreshRegister, m_registerModel, &RegisterModel::setRegister, Qt::BlockingQueuedConnection);
+	connect(EventDispatcher::instance(), &EventDispatcher::showRegisters, m_registerModel, &RegisterModel::setRegister);
 
 	m_debugCore->debugNew(path, args);
 }

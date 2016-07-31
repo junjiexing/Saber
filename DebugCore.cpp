@@ -106,7 +106,7 @@ void DebugCore::refreshMemoryMap()
 
     } while (start != 0);
 
-    emit memoryMapRefreshed(m_memoryRegions);
+    emit EventDispatcher::instance()->showMemoryMap(m_memoryRegions);
 }
 
 bool DebugCore::findRegion(uint64_t address, uint64_t &start, uint64_t &size)
@@ -430,7 +430,7 @@ bool DebugCore::handleException(ExceptionInfo const&info)
     log(str, LogType::Info);
     m_currThread = info.threadPort;
 
-    emit refreshRegister(getAllRegisterState(info.threadPort));
+    emit EventDispatcher::instance()->showRegisters(getAllRegisterState(info.threadPort));
     switch (info.exceptionType)
     {
         case EXC_SOFTWARE:
@@ -466,7 +466,7 @@ bool DebugCore::handleException(ExceptionInfo const&info)
         case EXC_RESOURCE:
         case EXC_GUARD:
         case EXC_CORPSE_NOTIFY:
-            EventDispatcher::instance()->setDisasmAddress(getAllRegisterState(info.threadPort).rip);
+            emit EventDispatcher::instance()->setDisasmAddress(getAllRegisterState(info.threadPort).rip);
             waitForContinue();
             //TODO:如果用户处理了异常应该返回true阻止程序自己处理异常
             return false;
@@ -525,7 +525,7 @@ bool DebugCore::handleBreakpoint(ExceptionInfo const &info)
 
     if (info.exceptionData[0] == 1)
     {
-        EventDispatcher::instance()->setDisasmAddress(state.__rip);
+        emit EventDispatcher::instance()->setDisasmAddress(state.__rip);
         waitForContinue();
 
         return doContinueDebug();
@@ -545,7 +545,7 @@ bool DebugCore::handleBreakpoint(ExceptionInfo const &info)
         //TODO: 询问用户是将异常传递给程序还是从断点指令下一条指令执行
     }
 
-    EventDispatcher::instance()->setDisasmAddress(state.__rip);
+    emit EventDispatcher::instance()->setDisasmAddress(state.__rip);
     waitForContinue();
 
     err = thread_set_state(info.threadPort, x86_THREAD_STATE64, (thread_state_t)&state, stateCount);

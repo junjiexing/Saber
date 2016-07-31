@@ -2,7 +2,6 @@
 #include "libasmx64.h"
 #include "DebugCore.h"
 #include "Log.h"
-#include "EventDispatcher.h"
 
 #include <QtWidgets>
 
@@ -11,12 +10,11 @@ DisasmView::DisasmView(QWidget *parent)
       m_regionStart(0),m_regionSize(0),
       m_hilightLine(0)
 {
-    EventDispatcher::instance()->registerReceiver(SetDisasmAddressEvent::eventType, this);
-    EventDispatcher::instance()->registerReceiver(SetDebugCoreEvent::eventType, this);
 }
 
 void DisasmView::gotoAddress(uint64_t address)
 {
+	log(QString("on gotoAddress: %1").arg(address));
     m_currentAddress = address;
     if (!(address >= m_regionStart && address <= (m_regionStart + m_regionSize)))
     {
@@ -166,30 +164,12 @@ void DisasmView::mousePressEvent(QMouseEvent *event)
 
 void DisasmView::setDebugCore(DebugCore *debugCore)
 {
+	log(QString("on setDebugCore:%1").arg((uint64_t)debugCore));
     m_debugCore = debugCore;
 }
 
 DisasmView::~DisasmView()
 {
-    EventDispatcher::instance()->removeReceiver(SetDisasmAddressEvent::eventType, this);
-    EventDispatcher::instance()->removeReceiver(SetDebugCoreEvent::eventType, this);
-}
-
-bool DisasmView::event(QEvent *event)
-{
-    if (event->type() == SetDisasmAddressEvent::eventType)
-    {
-        log("On event SetDisasmAddress");
-        gotoAddress(static_cast<SetDisasmAddressEvent*>(event)->address);
-        return true;
-    }
-    else if (event->type() == SetDebugCoreEvent::eventType)
-    {
-        log("On event SetDebugCoreEvent");
-        setDebugCore(static_cast<SetDebugCoreEvent*>(event)->debugCore);
-        return true;
-    }
-    return QAbstractScrollArea::event(event);
 }
 
 void DisasmView::wheelEvent(QWheelEvent *event)

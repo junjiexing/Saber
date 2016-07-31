@@ -40,8 +40,6 @@ private:
 protected:
     void mousePressEvent(QMouseEvent *event) override;
 
-    virtual bool event(QEvent *event) override;
-
     virtual void wheelEvent(QWheelEvent *event) override;
 };
 

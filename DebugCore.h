@@ -48,9 +48,7 @@ public:
     bool addOrEnableBreakpoint(uint64_t address, bool isHardware = false);
     BreakpointPtr findBreakpoint(uint64_t address);
 signals:
-    void memoryMapRefreshed(std::vector<MemoryRegion>& regions);
     void debugLoopFinished(DebugProcess* p);
-    void refreshRegister(const Register regs);
 
 private:
     void debugLoop();

@@ -1,4 +1,5 @@
 #include "MainWindow.h"
+#include "EventDispatcher.h"
 
 #include <QtFlexStyle.h>
 
@@ -27,9 +28,8 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-//    AVHTTP_AUTO_LOGGER(".");
-
     QApplication a(argc, argv);
+    EventDispatcher::registerMetaType();
     QApplication::setStyle(new FlexStyle());
 
     MainWidget w;
