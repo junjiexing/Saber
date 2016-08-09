@@ -24,7 +24,7 @@ set(SOURCE_FILES
         QtFlex5/QtFlexManager.cpp
         QtFlex5/QtFlexStyle.cpp
         QtFlex5/QtFlexWidget.cpp
-        QtFlex.qrc
+        resource.qrc
 
         Breakpoint.cpp
         DebugCore.cpp

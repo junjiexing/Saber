@@ -23,28 +23,45 @@ MainWidget::MainWidget(QWidget *parent)
 
 	//创建菜单
 	auto menu = new QMenu("文件",this);
-	addAction("file.open", menu->addAction(QIcon(""), "打开", this, [this]{onFileOpen();}));
-	addAction("file.close", menu->addAction("关闭", this, []{}));
-	addAction("file.exit", menu->addAction("退出", this, []{}));
+	addAction("file.open", menu->addAction(QIcon(":/icon/Resources/open.png"), "打开", this, [this]{onFileOpen();}, QKeySequence::New));
+	addAction("file.exit", menu->addAction(QIcon(":/icon/Resources/close.png"), "退出", this, []{}, QKeySequence::Close));
 	menuBar()->addMenu(menu);
 
 	menu = new QMenu("编辑",this);
-	addAction("edit.copy", menu->addAction("复制", this, []{}));
+	addAction("edit.copy", menu->addAction(QIcon(":/icon/Resources/copy.png"), "复制", this, []{}, QKeySequence::Copy));
 	menuBar()->addMenu(menu);
 
 	menu = new QMenu("视图",this);
-	addAction("view.disasmView", menu->addAction("反汇编窗口", this, [this]{activeOrAddDockWidget(Flex::FileView,"反汇编",Flex::M,0,center);}));
-	addAction("view.memoryView", menu->addAction("内存窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"内存",Flex::B0,0,center);}));
-	addAction("view.registerView", menu->addAction("寄存器窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"寄存器",Flex::B0,0,center);}));
-	addAction("view.callstackView", menu->addAction("调用堆栈窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"调用堆栈",Flex::B0,0,center);}));
+	addAction("view.disasmView", menu->addAction(QIcon(":/icon/Resources/disasm_view.png"), "反汇编窗口", this, [this]
+	{
+		activeOrAddDockWidget(Flex::FileView,"反汇编",Flex::M,0,center);
+	}, QKeySequence(Qt::ALT + Qt::Key_D)));
+	addAction("view.memoryView", menu->addAction(QIcon(":/icon/Resources/memory_view.png"),"内存窗口", this, [this]
+	{
+		activeOrAddDockWidget(Flex::ToolView,"内存",Flex::B0,0,center);
+	}, QKeySequence(Qt::ALT + Qt::Key_M)));
+	addAction("view.registerView", menu->addAction(QIcon(":/icon/Resources/register_view.png"), "寄存器窗口", this, [this]
+	{
+		activeOrAddDockWidget(Flex::ToolView,"寄存器",Flex::B0,0,center);
+	}, QKeySequence(Qt::ALT + Qt::Key_R)));
+	addAction("view.callstackView", menu->addAction("调用堆栈窗口", this, [this]
+	{
+		activeOrAddDockWidget(Flex::ToolView,"调用堆栈",Flex::B0,0,center);
+	}, QKeySequence(Qt::ALT + Qt::Key_C)));
 	addAction("view.memoryMapView", menu->addAction("内存映射窗口窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"内存映射",Flex::B0,0,center);}));
 	addAction("view.watchView", menu->addAction("监视窗口", this, []{}));
-	addAction("view.breakpointView", menu->addAction("断点窗口", this, []{}));
-	addAction("view.outputView", menu->addAction("输出窗口", this, [this]{activeOrAddDockWidget(Flex::ToolView,"输出",Flex::B0,0,center);}));
+	addAction("view.breakpointView", menu->addAction(QIcon(":/icon/Resources/breakpoint_enabled.png"), "断点窗口", this, []
+	{
+
+	}, QKeySequence(Qt::ALT + Qt::Key_B)));
+	addAction("view.outputView", menu->addAction(QIcon(":/icon/Resources/log_view.png"), "输出窗口", this, [this]
+	{
+		activeOrAddDockWidget(Flex::ToolView,"输出",Flex::B0,0,center);
+	}, Qt::ALT + Qt::Key_L));
 	menuBar()->addMenu(menu);
 
 	menu = new QMenu("调试",this);
-	addAction("debug.run", menu->addAction("运行", this, [this]
+	addAction("debug.run", menu->addAction(QIcon(":/icon/Resources/run.png"), "运行", [this]
 	{
 		if (m_debugCore)
 		{
@@ -54,9 +71,20 @@ MainWidget::MainWidget(QWidget *parent)
 		{
 			QMessageBox::warning(this, "错误", "请先选择要调试的程序");
 		}
-	}));
-	addAction("debug.stepOver", menu->addAction("单步步过", this, []{}));
-	addAction("debug.stepIn", menu->addAction("单步步入", this, [this]
+	}, QKeySequence(Qt::Key_F9)));
+	addAction("debug.stop", menu->addAction(QIcon(":/icon/Resources/stop.png"), "停止", this, []
+	{
+
+	}, QKeySequence(Qt::Key_F8)));
+	addAction("debug.restart", menu->addAction(QIcon(":/icon/Resources/restart.png"), "重新启动", this, []
+	{
+
+	}, QKeySequence(Qt::Key_F8)));
+	addAction("debug.stepOver", menu->addAction(QIcon(":/icon/Resources/step_over.png"), "单步步过", this, []
+	{
+
+	}, QKeySequence(Qt::Key_F8)));
+	addAction("debug.stepIn", menu->addAction(QIcon(":/icon/Resources/step_into.png"), "单步步入", this, [this]
 	{
 		if (m_debugCore)
 		{
@@ -66,11 +94,19 @@ MainWidget::MainWidget(QWidget *parent)
 		{
 		  QMessageBox::warning(this, "错误", "请先选择要调试的程序");
 		}
-	}));
+	}, QKeySequence(Qt::Key_F7)));
+	addAction("debug.runToReturn", menu->addAction(QIcon(":/icon/Resources/run_to_ret.png"), "运行到返回", this, []
+	{
+
+	}, QKeySequence(Qt::CTRL + Qt::Key_F7)));
+	addAction("debug.runToCursor", menu->addAction(QIcon(":/icon/Resources/run_to_cursor.png"), "运行到光标处", this, []
+	{
+
+	}, QKeySequence(Qt::Key_F4)));
 	menuBar()->addMenu(menu);
 
 	menu = new QMenu("工具",this);
-	addAction("tools.option", menu->addAction("选项", this, []{}));
+	addAction("tools.option", menu->addAction(QIcon(":/icon/Resources/option.png"), "选项", this, []{}, QKeySequence(Qt::CTRL + Qt::Key_O)));
 	menuBar()->addMenu(menu);
 
 	menu = new QMenu("窗口",this);
@@ -84,25 +120,27 @@ MainWidget::MainWidget(QWidget *parent)
 
 	//创建工具栏
 	const QString qss =
-			R"-(QToolBar {
-    background: #CFD6E5;
-    spacing: 3px;
-    border:1px solid #CFD6E5;
-}
+		R"-(QToolBar {
+			background: #CFD6E5;
+			spacing: 3px;
+			border:1px solid #CFD6E5;
+		}
 
-QToolButton:hover  {
-    border: 2px solid #E5C365;
-    background-color: #FDF4BF;
-}
+		QToolButton:hover {
+			border: 2px solid #E5C365;
+			background-color: #FDF4BF;
+		}
 
-QToolButton  {
-    border: 2px solid #CFD6E5;
-    background-color: #CFD6E5;
-})-";
+		QToolButton {
+			border: 2px solid #CFD6E5;
+			background-color: #CFD6E5;
+			height: 1em;
+			width: 1em;
+		})-";
 	auto tb = addToolBar("文件");
 	tb->setStyleSheet(qss);
 	tb->addAction(getAction("file.open"));
-	tb->addAction(getAction("file.close"));
+	tb->addAction(getAction("file.exit"));
 
 	tb = addToolBar("编辑");
 	tb->setStyleSheet(qss);
@@ -122,10 +160,6 @@ QToolButton  {
 	tb = addToolBar("工具");
 	tb->setStyleSheet(qss);
 	tb->addAction(getAction("tools.option"));
-
-	tb = addToolBar("帮助");
-	tb->setStyleSheet(qss);
-	tb->addAction(getAction("help.about"));
 
 
 	//初始化model
