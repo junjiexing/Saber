@@ -1,0 +1,28 @@
+<RCC>
+    <qresource prefix="/">
+        <file>Resources/guiders.png</file>
+        <file>Resources/buttons.png</file>
+        <file>Resources/extents.png</file>
+    </qresource>
+    <qresource prefix="/icon">
+        <file>Resources/open.png</file>
+        <file>Resources/close.png</file>
+        <file>Resources/stop.png</file>
+        <file>Resources/copy.png</file>
+        <file>Resources/disasm_view.png</file>
+        <file>Resources/memory_view.png</file>
+        <file>Resources/register_view.png</file>
+        <file>Resources/log_view.png</file>
+        <file>Resources/run.png</file>
+        <file>Resources/run_to_cursor.png</file>
+        <file>Resources/run_to_ret.png</file>
+        <file>Resources/step_into.png</file>
+        <file>Resources/step_out.png</file>
+        <file>Resources/step_over.png</file>
+        <file>Resources/pause.png</file>
+        <file>Resources/restart.png</file>
+        <file>Resources/breakpoint_disabled.png</file>
+        <file>Resources/breakpoint_enabled.png</file>
+        <file>Resources/option.png</file>
+    </qresource>
+</RCC>
