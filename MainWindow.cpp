@@ -23,7 +23,7 @@ MainWidget::MainWidget(QWidget *parent)
 
 	//创建菜单
 	auto menu = new QMenu("文件",this);
-	addAction("file.open", menu->addAction("打开", this, [this]{onFileOpen();}));
+	addAction("file.open", menu->addAction(QIcon(""), "打开", this, [this]{onFileOpen();}));
 	addAction("file.close", menu->addAction("关闭", this, []{}));
 	addAction("file.exit", menu->addAction("退出", this, []{}));
 	menuBar()->addMenu(menu);
