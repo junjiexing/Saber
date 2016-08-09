@@ -323,13 +323,14 @@ void DebugCore::getAllSegment()
     }
 }
 
-bool DebugCore::addBreakpoint(uint64_t address, bool enabled, bool isHardware)
+bool DebugCore::addBreakpoint(uint64_t address, bool enabled, bool isHardware, bool oneTime)
 {
     assert(!isHardware);    //TODO:
     assert(!findBreakpoint(address));
 
     auto bp = std::make_shared<Breakpoint>(this);
-    bp->m_address = address;
+    bp->setAddress(address);
+	bp->setOneTime(oneTime);
     if (!bp->setEnabled(enabled))
     {
         return false;
@@ -339,6 +340,30 @@ bool DebugCore::addBreakpoint(uint64_t address, bool enabled, bool isHardware)
     return true;
 }
 
+bool DebugCore::removeBreakpoint(uint64_t address)
+{
+	auto it = std::find_if(m_breakpoints.cbegin(), m_breakpoints.cend(),
+		[address](BreakpointPtr bp)
+	{
+		return bp->address() == address;
+	});
+
+	if (it == m_breakpoints.cend())
+		return false;
+
+	if (!(*it)->setEnabled(false))
+	{
+		return false;
+	}
+
+	m_breakpoints.erase(it);
+
+	return true;
+}
+bool DebugCore::removeBreakpoint(DebugCore::BreakpointPtr bp)
+{
+	return removeBreakpoint(bp->address());
+}
 
 bool DebugCore::debugNew(const QString &path, const QString &args)
 {
@@ -441,7 +466,7 @@ bool DebugCore::handleException(ExceptionInfo const&info)
                 {
                     //当子进程执行exec系列函数时会产生sigtrap信号
                     //TODO: 有多个子进程应该如何处理?
-                    addOrEnableBreakpoint(getEntryPoint());
+                    addOrEnableBreakpoint(getEntryPoint(), false, true);
                 }
                 ptrace(PT_CONTINUE, m_pid, (caddr_t)1, 0);
             }
@@ -488,7 +513,7 @@ DebugCore::BreakpointPtr DebugCore::findBreakpoint(uint64_t address)
     return nullptr;
 }
 
-bool DebugCore::addOrEnableBreakpoint(uint64_t address, bool isHardware)
+bool DebugCore::addOrEnableBreakpoint(uint64_t address, bool isHardware, bool oneTime)
 {
     auto bp = findBreakpoint(address);
     if (bp)
@@ -496,7 +521,7 @@ bool DebugCore::addOrEnableBreakpoint(uint64_t address, bool isHardware)
         return bp->setEnabled(true);
     }
 
-    return addBreakpoint(address, true, isHardware);
+    return addBreakpoint(address, true, isHardware, oneTime);
 }
 
 void DebugCore::continueDebug()
@@ -539,6 +564,13 @@ bool DebugCore::handleBreakpoint(ExceptionInfo const &info)
         log(QString("Un known breakpoint at 0x%1").arg(state.__rip), LogType::Warning);
         ++state.__rip; //TODO:这里会导致反汇编窗口显示int3指令之后的一条指令,反汇编窗口应当将int3指令显示出来
     }
+	else if (bp->isOneTime())
+	{
+		if (!removeBreakpoint(bp))
+		{
+			log(QString("删除一次性断点 0x%1 失败").arg(bp->address(), 0, 16), LogType::Warning);
+		}
+	}
     else if (!bp->setEnabled(false))
     {
         log("disable breakpoint failed", LogType::Error);
@@ -593,3 +625,5 @@ bool DebugCore::doContinueDebug()
 
     return ptrace(PT_CONTINUE, m_pid, (caddr_t)1, 0) == -1;
 }
+
+

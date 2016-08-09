@@ -44,8 +44,10 @@ public:
     void getAllSegment();
 
     using BreakpointPtr = std::shared_ptr<Breakpoint>;
-    bool addBreakpoint(uint64_t address, bool enabled = true, bool isHardware = false);
-    bool addOrEnableBreakpoint(uint64_t address, bool isHardware = false);
+    bool addBreakpoint(uint64_t address, bool enabled = true, bool isHardware = false, bool oneTime = false);
+	bool removeBreakpoint(uint64_t address);
+	bool removeBreakpoint(BreakpointPtr bp);
+    bool addOrEnableBreakpoint(uint64_t address, bool isHardware = false, bool oneTime = false);
     BreakpointPtr findBreakpoint(uint64_t address);
 signals:
     void debugLoopFinished(DebugProcess* p);

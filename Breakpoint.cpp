@@ -3,8 +3,7 @@
 #include "Log.h"
 
 Breakpoint::Breakpoint(DebugCore *debugCore)
-    :m_debugCore(debugCore), m_address(0),
-      m_orgByte(0), m_enabled(false), m_isHardware(false)
+    :m_debugCore(debugCore)
 {
 
 }
@@ -63,3 +62,4 @@ bool Breakpoint::setEnabled(bool enabled)
     m_enabled = false;
     return true;
 }
+
