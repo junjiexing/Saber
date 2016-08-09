@@ -106,7 +106,7 @@ MainWidget::MainWidget(QWidget *parent)
 	menuBar()->addMenu(menu);
 
 	menu = new QMenu("工具",this);
-	addAction("tools.option", menu->addAction(QIcon(":/icon/Resources/option.png"), "选项", this, []{}, QKeySequence(Qt::CTRL + Qt::Key_O)));
+	addAction("tools.option", menu->addAction(QIcon(":/icon/Resources/option.png"), "选项", this, []{}, QKeySequence(Qt::ALT + Qt::Key_O)));
 	menuBar()->addMenu(menu);
 
 	menu = new QMenu("窗口",this);
