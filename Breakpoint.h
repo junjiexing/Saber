@@ -27,6 +27,11 @@ public:
         return m_orgByte;
     }
 
+	void setOrgByte(uint8_t orgByte)
+	{
+		m_orgByte = orgByte;
+	}
+
     bool enabled() const
     {
         return m_enabled;
@@ -48,6 +53,8 @@ public:
 	{
 		m_oneTime = oneTime;
 	}
+
+	static const uint8_t bpData;
 private:
     uint64_t m_address = 0;
     uint8_t m_orgByte = 0;

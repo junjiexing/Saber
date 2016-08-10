@@ -31,8 +31,8 @@ public:
 
     void refreshMemoryMap();
     bool findRegion(uint64_t address, uint64_t& start, uint64_t& size);
-    bool readMemory(mach_vm_address_t address, void* buffer, mach_vm_size_t size);
-    bool writeMemory(mach_vm_address_t address, const void* buffer, mach_vm_size_t size);
+    bool readMemory(mach_vm_address_t address, void* buffer, mach_vm_size_t size, bool bypassBreakpoint = true);
+    bool writeMemory(mach_vm_address_t address, const void* buffer, mach_vm_size_t size, bool bypassBreakpoint = true);
 
     bool debugNew(const QString &path, const QString &args);
     void continueDebug();

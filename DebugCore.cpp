@@ -111,16 +111,16 @@ void DebugCore::refreshMemoryMap()
 
 bool DebugCore::findRegion(uint64_t address, uint64_t &start, uint64_t &size)
 {
-    refreshMemoryMap();
-    for (auto region : m_memoryRegions)
-    {
-        if (region.start <= address && (region.start + region.size) >= address)
-        {
-            start = region.start;
-            size = region.size;
-            return true;
-        }
-    }
+//    refreshMemoryMap();
+//    for (auto region : m_memoryRegions)
+//    {
+//        if (region.start <= address && (region.start + region.size) >= address)
+//        {
+//            start = region.start;
+//            size = region.size;
+//            return true;
+//        }
+//    }
 
     mach_vm_address_t _start = address;
     mach_vm_size_t _size = 0;
@@ -139,7 +139,7 @@ bool DebugCore::findRegion(uint64_t address, uint64_t &start, uint64_t &size)
     return true;
 }
 
-bool DebugCore::readMemory(mach_vm_address_t address, void* buffer, mach_vm_size_t size)
+bool DebugCore::readMemory(mach_vm_address_t address, void* buffer, mach_vm_size_t size, bool bypassBreakpoint)
 {
     /* read memory - vm_read_overwrite because we supply the buffer */
     mach_vm_size_t nread;
@@ -154,10 +154,25 @@ bool DebugCore::readMemory(mach_vm_address_t address, void* buffer, mach_vm_size
         log(QString("mach_vm_read_overwrite failed, requested size: %1 read: %2").arg(size).arg(nread), LogType::Warning);
         return false;
     }
-    return true;
+
+	if (!bypassBreakpoint)
+	{
+		return true;
+	}
+
+	for (auto bp : m_breakpoints)
+	{
+		auto bpAddr = bp->address();
+		if (bpAddr >= address && bpAddr < address + size)
+		{
+			((uint8_t*)buffer)[bpAddr - address] = bp->orgByte();
+		}
+	}
+
+	return true;
 }
 
-bool DebugCore::writeMemory(mach_vm_address_t address, const void *buffer, mach_vm_size_t size)
+bool DebugCore::writeMemory(mach_vm_address_t address, const void *buffer, mach_vm_size_t size, bool bypassBreakpoint)
 {
     mach_vm_address_t regionAddress = address;
     mach_vm_size_t regionSize = 0;
@@ -169,7 +184,7 @@ bool DebugCore::writeMemory(mach_vm_address_t address, const void *buffer, mach_
     if (kr != KERN_SUCCESS)
     {
         log(QString("写入内存失败，mach_vm_region_recurse：").append(mach_error_string(kr)), LogType::Warning);
-        return 0;
+        return false;
     }
 
     //outputMessage(QString("region: %1").arg(regionAddress, 0, 16), MessageType::Info);
@@ -179,7 +194,7 @@ bool DebugCore::writeMemory(mach_vm_address_t address, const void *buffer, mach_
         if (kr != KERN_SUCCESS)
         {
             log(QString("写入内存失败，mach_vm_protect：").append(mach_error_string(kr)), LogType::Warning);
-            return 0;
+            return false;
         }
     }
 
@@ -190,6 +205,27 @@ bool DebugCore::writeMemory(mach_vm_address_t address, const void *buffer, mach_
         return false;
     }
 
+	if (!bypassBreakpoint)
+	{
+		return true;
+	}
+
+	for (auto bp : m_breakpoints)
+	{
+		auto bpAddr = bp->address();
+		if (bpAddr >= address && bpAddr < address + size)
+		{
+			kr = mach_vm_write(m_task, bpAddr, (vm_offset_t)&Breakpoint::bpData, 1);
+			if (kr != KERN_SUCCESS)
+			{
+				//TODO: ?????????
+				log(QString("mach_vm_write() failed: %1, address: 0x%2").arg(mach_error_string(kr)).arg(QString::number(address, 16)), LogType::Error);
+				return false;
+			}
+
+			bp->setOrgByte(((uint8_t*)buffer)[bpAddr - address]);
+		}
+	}
     // TODO: 还原内存属性
     return true;
 }

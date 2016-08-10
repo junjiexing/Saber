@@ -8,7 +8,7 @@ Breakpoint::Breakpoint(DebugCore *debugCore)
 
 }
 
-static const uint8_t bpData = 0xCC;
+const uint8_t Breakpoint::bpData = 0xCC;
 
 bool Breakpoint::setEnabled(bool enabled)
 {
@@ -20,13 +20,13 @@ bool Breakpoint::setEnabled(bool enabled)
 
     if (enabled)
     {
-        bool r = m_debugCore->readMemory(m_address, &m_orgByte, 1);
+        bool r = m_debugCore->readMemory(m_address, &m_orgByte, 1, false);
         if (!r)
         {
             log(QString("无法启用断点 %1：readMemory()失败。").arg(QString::number(m_address, 16)), LogType::Warning);
             return false;
         }
-        r = m_debugCore->writeMemory(m_address, &bpData, 1);
+        r = m_debugCore->writeMemory(m_address, &bpData, 1, false);
         if (!r)
         {
             log(QString("无法启用断点 %1：writeMemory()失败。").arg(QString::number(m_address, 16)), LogType::Warning);
@@ -39,7 +39,7 @@ bool Breakpoint::setEnabled(bool enabled)
 
     log("disable bp");
     uint8_t tmp;
-    bool r = m_debugCore->readMemory(m_address, &tmp, 1);
+    bool r = m_debugCore->readMemory(m_address, &tmp, 1, false);
     if (!r)
     {
         log(QString("读取断点 %1 处内存失败。").arg(QString::number(m_address, 16)), LogType::Warning);
@@ -52,7 +52,7 @@ bool Breakpoint::setEnabled(bool enabled)
                                    LogType::Warning);
     }
 
-    r = m_debugCore->writeMemory(m_address, &m_orgByte, 1);
+    r = m_debugCore->writeMemory(m_address, &m_orgByte, 1, false);
     if (!r)
     {
         log(QString("无法禁用断点 %1：writeMemory()失败。").arg(QString::number(m_address, 16)), LogType::Warning);
