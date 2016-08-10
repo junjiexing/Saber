@@ -53,7 +53,6 @@ void DebugProcess::setupChildProcess()
 
 
 DebugCore::DebugCore()
-    :QObject(nullptr)
 {
 
 }
@@ -111,16 +110,16 @@ void DebugCore::refreshMemoryMap()
 
 bool DebugCore::findRegion(uint64_t address, uint64_t &start, uint64_t &size)
 {
-//    refreshMemoryMap();
-//    for (auto region : m_memoryRegions)
-//    {
-//        if (region.start <= address && (region.start + region.size) >= address)
-//        {
-//            start = region.start;
-//            size = region.size;
-//            return true;
-//        }
-//    }
+    refreshMemoryMap();
+    for (auto region : m_memoryRegions)
+    {
+        if (region.start <= address && (region.start + region.size) >= address)
+        {
+            start = region.start;
+            size = region.size;
+            return true;
+        }
+    }
 
     mach_vm_address_t _start = address;
     mach_vm_size_t _size = 0;
@@ -407,10 +406,6 @@ bool DebugCore::debugNew(const QString &path, const QString &args)
     QString command = path + " " + args;
 	m_process->start(command);
     m_pid = (pid_t)m_process->pid();
-
-    //waitForFinished不能在其他线程中执行，只能写成信号槽方式
-    connect(this, SIGNAL(debugLoopFinished(DebugProcess*)),
-            this, SLOT(onDebugLoopFinished(DebugProcess*)), Qt::BlockingQueuedConnection);
 
     if (m_pid <= 0)
     {

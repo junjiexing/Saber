@@ -22,9 +22,8 @@
 
 class DebugProcess;
 
-class DebugCore : public QObject
+class DebugCore
 {
-    Q_OBJECT
 public:
     DebugCore();
     ~DebugCore();
@@ -50,9 +49,6 @@ public:
 	bool removeBreakpoint(BreakpointPtr bp);
     bool addOrEnableBreakpoint(uint64_t address, bool isHardware = false, bool oneTime = false);
     BreakpointPtr findBreakpoint(uint64_t address);
-signals:
-    void debugLoopFinished(DebugProcess* p);
-
 private:
     void debugLoop();
     bool handleException(ExceptionInfo const& info);
