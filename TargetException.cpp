@@ -155,6 +155,7 @@ bool TargetException::run()
 void TargetException::stop()
 {
     m_stop = true;
+    mach_port_destroy(mach_task_self(), m_exceptionPort);
 }
 
 std::map<task_t, TargetException*> TargetException::taskToSelf;

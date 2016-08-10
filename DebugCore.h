@@ -35,6 +35,7 @@ public:
     bool writeMemory(mach_vm_address_t address, const void* buffer, mach_vm_size_t size, bool bypassBreakpoint = true);
 
     bool debugNew(const QString &path, const QString &args);
+	void stop();
     void continueDebug();
     void stepIn();
     mach_vm_address_t findBaseAddress();
@@ -57,8 +58,6 @@ private:
     bool handleException(ExceptionInfo const& info);
 
     bool handleBreakpoint(ExceptionInfo const& info);
-private slots:
-    void onDebugLoopFinished(DebugProcess* p);
 private:
     std::vector<MemoryRegion> m_memoryRegions;
 //    QString m_path;
@@ -67,6 +66,8 @@ private:
     pid_t m_pid;
 	mach_port_t m_currThread = 0;
     mach_port_t m_task;
+
+	std::thread m_debugThread;
 
     std::vector<BreakpointPtr> m_breakpoints;
 
@@ -80,5 +81,7 @@ private:
 
 	bool m_stepIn = false;
 	bool doContinueDebug();
+
+	DebugProcess* m_process;
 };
 

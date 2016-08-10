@@ -15,6 +15,10 @@ DisasmView::DisasmView(QWidget *parent)
 void DisasmView::gotoAddress(uint64_t address)
 {
 	log(QString("on gotoAddress: %1").arg(address));
+	if(address == 0)
+	{
+		return;
+	}
     m_currentAddress = address;
     if (!(address >= m_regionStart && address <= (m_regionStart + m_regionSize)))
     {

@@ -403,10 +403,10 @@ bool DebugCore::removeBreakpoint(DebugCore::BreakpointPtr bp)
 
 bool DebugCore::debugNew(const QString &path, const QString &args)
 {
-    auto p = new DebugProcess;
+    m_process = new DebugProcess; //TODO: 泄露怎么处理??
     QString command = path + " " + args;
-    p->start(command);
-    m_pid = (pid_t)p->pid();
+	m_process->start(command);
+    m_pid = (pid_t)m_process->pid();
 
     //waitForFinished不能在其他线程中执行，只能写成信号槽方式
     connect(this, SIGNAL(debugLoopFinished(DebugProcess*)),
@@ -414,7 +414,7 @@ bool DebugCore::debugNew(const QString &path, const QString &args)
 
     if (m_pid <= 0)
     {
-        log(QString("启动调试进程失败：%1").arg(p->errorString()), LogType::Error);
+        log(QString("启动调试进程失败：%1").arg(m_process->errorString()), LogType::Error);
         return false;
     }
 
@@ -432,13 +432,34 @@ bool DebugCore::debugNew(const QString &path, const QString &args)
         return false;
     }
 
-    std::thread thd([p,this]
+    m_debugThread = std::thread([this]
     {
         debugLoop();
-        emit debugLoopFinished(p);
+//        emit debugLoopFinished(p);
     });
-    thd.detach();
     return true;
+}
+
+void DebugCore::stop()
+{
+	auto ret = kill(m_pid, SIGKILL);
+	if (ret != 0)
+	{
+		log(QString("Stop debug SIGKILL failed: %1").arg(ret), LogType::Warning);
+	}
+
+	ret = ptrace(PT_KILL, m_pid, 0, 0);
+	if (ret != -1)
+	{
+		log(QString("Stop debug ptrace kill failed: %1").arg(ret), LogType::Error);
+		return;
+	}
+
+	m_targetException.stop();
+	if (m_debugThread.joinable())
+	{
+		m_debugThread.join();
+	}
 }
 
 void DebugCore::debugLoop()
@@ -447,6 +468,9 @@ void DebugCore::debugLoop()
     {
         log("TargetException.run() failed.", LogType::Error);
     }
+
+	log("TargetException.run() exited.");
+
 //    for (;;)
 //    {
 //        //等待子进程信号
@@ -472,12 +496,6 @@ void DebugCore::debugLoop()
 ////        ptrace(PT_STEP, m_pid, (caddr_t)1, 0);
 //        ptrace(PT_CONTINUE, m_pid, (caddr_t)1, 0);
 //    }
-}
-
-void DebugCore::onDebugLoopFinished(DebugProcess *p)
-{
-    p->waitForFinished();
-    p->deleteLater();
 }
 
 bool DebugCore::handleException(ExceptionInfo const&info)
@@ -661,5 +679,9 @@ bool DebugCore::doContinueDebug()
 
     return ptrace(PT_CONTINUE, m_pid, (caddr_t)1, 0) == -1;
 }
+
+
+
+
 
 

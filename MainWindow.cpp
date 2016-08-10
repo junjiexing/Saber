@@ -24,8 +24,14 @@ MainWidget::MainWidget(QWidget *parent)
 
 	//创建菜单
 	auto menu = new QMenu("文件",this);
-	addAction("file.open", menu->addAction(QIcon(":/icon/Resources/open.png"), "打开", [this]{onFileOpen();}, QKeySequence::New));
-	addAction("file.exit", menu->addAction(QIcon(":/icon/Resources/close.png"), "退出", []{}, QKeySequence::Close));
+	addAction("file.open", menu->addAction(QIcon(":/icon/Resources/open.png"), "打开", [this]
+	{
+		onFileOpen();
+	}, QKeySequence::New));
+	addAction("file.exit", menu->addAction(QIcon(":/icon/Resources/close.png"), "退出", []
+	{
+
+	}, QKeySequence::Close));
 	menuBar()->addMenu(menu);
 
 	menu = new QMenu("编辑",this);
@@ -73,9 +79,10 @@ MainWidget::MainWidget(QWidget *parent)
 			QMessageBox::warning(this, "错误", "请先选择要调试的程序");
 		}
 	}, QKeySequence(Qt::Key_F9)));
-	addAction("debug.stop", menu->addAction(QIcon(":/icon/Resources/stop.png"), "停止", []
+	addAction("debug.stop", menu->addAction(QIcon(":/icon/Resources/stop.png"), "停止", [this]
 	{
-
+		if (m_debugCore)
+			m_debugCore->stop();
 	}, QKeySequence(Qt::Key_F8)));
 	addAction("debug.restart", menu->addAction(QIcon(":/icon/Resources/restart.png"), "重新启动", []
 	{
@@ -321,6 +328,8 @@ void MainWidget::onDockEidgetCreated(DockWidget *widget)
 		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDebugCore, view, &DisasmView::setDebugCore);
 		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDisasmAddress, view, &DisasmView::gotoAddress);
 		QObject::connect(EventDispatcher::instance(), &EventDispatcher::refreshDisasmView, view, &DisasmView::onRefresh);
+		view->setDebugCore(m_debugCore);
+		view->gotoAddress(g_highlightAddress);
         widget->attachWidget(view);
     }
 	else
