@@ -21,6 +21,7 @@ public slots:
     void setRegion(uint64_t address);
     void analysis();
     void setDebugCore(DebugCore* debugCore);
+	void onRefresh();
     // QWidget interface
 protected:
     void paintEvent(QPaintEvent *e) override;
@@ -31,7 +32,6 @@ private:
 
     std::vector<uint64_t> m_insnStart;
 
-    uint64_t m_hilightLine;
     uint64_t m_currentAddress;
     bool m_foundIndex;
 

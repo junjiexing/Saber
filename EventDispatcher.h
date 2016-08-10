@@ -22,5 +22,6 @@ signals:
     void setDisasmAddress(uint64_t addr);
 	void showMemoryMap(std::vector<MemoryRegion> regions);
 	void showRegisters(Register regs);
+	void refreshDisasmView();
 };
 

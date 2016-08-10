@@ -2,13 +2,13 @@
 #include "libasmx64.h"
 #include "DebugCore.h"
 #include "Log.h"
+#include "global.h"
 
 #include <QtWidgets>
 
 DisasmView::DisasmView(QWidget *parent)
     : QAbstractScrollArea(parent),
-      m_regionStart(0),m_regionSize(0),
-      m_hilightLine(0)
+      m_regionStart(0),m_regionSize(0)
 {
 }
 
@@ -116,7 +116,11 @@ void DisasmView::paintEvent(QPaintEvent * e)
         //printf("0x%016" PRIX64 "\t%s\n", addr, pcsIns);
 
         QRect rc(0, i, viewport()->width(), h);
-        if (addr == m_hilightLine)
+		if (m_debugCore->findBreakpoint(addr))
+		{
+			p.fillRect(rc, Qt::red);
+		}
+        else if (addr == g_highlightAddress)
         {
             p.fillRect(rc, Qt::lightGray);
         }
@@ -134,30 +138,6 @@ void DisasmView::mousePressEvent(QMouseEvent *event)
     {
         return;
     }
-
-//    x64dis decoder;
-//    uint64_t addr = m_insnStart[verticalScrollBar()->value()];
-//    auto y = event->pos().y();
-//
-//    int h = viewport()->fontMetrics().height();
-//    for (int i = 0; i < viewport()->height(); i += h)
-//    {
-//        if ((m_regionStart + m_regionSize) <= addr)
-//        {
-//            break;
-//        }
-//        int size = std::min(15ull, m_regionStart + m_regionSize - addr);
-//        uint8_t buff[15];
-//        m_debugCore->readMemory(addr, buff, size);
-//        x86dis_insn* insn = decoder.decode(buff, size, addr);
-//        if (y >= i && y < i + h)
-//        {
-//            m_hilightLine = addr;
-//            break;
-//        }
-//
-//        addr += insn->size;
-//    }
 
     x64dis decoder;
     uint64_t addr = 0;
@@ -184,10 +164,9 @@ void DisasmView::mousePressEvent(QMouseEvent *event)
         m_debugCore->readMemory(addr, buff, size);
         x86dis_insn* insn = decoder.decode(buff, size, addr);
 
-        QRect rc(0, i, viewport()->width(), h);
         if (y >= i && y < i + h)
         {
-            m_hilightLine = addr;
+            g_highlightAddress = addr;
             break;
         }
         addr += insn->size;
@@ -211,4 +190,8 @@ void DisasmView::wheelEvent(QWheelEvent *event)
 {
     m_foundIndex = true;
     QAbstractScrollArea::wheelEvent(event);
+}
+void DisasmView::onRefresh()
+{
+	viewport()->update();
 }
