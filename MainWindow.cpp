@@ -376,7 +376,7 @@ void MainWidget::onFileOpen()
 		args = argsEdit->text();
 	}
 
-	m_debugCore = new DebugCore;
+	m_debugCore = std::make_shared<DebugCore>();
     emit EventDispatcher::instance()->setDebugCore(m_debugCore);
 	connect(EventDispatcher::instance(), &EventDispatcher::showMemoryMap, [this](std::vector<MemoryRegion> regions)
 	{

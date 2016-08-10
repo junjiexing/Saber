@@ -22,7 +22,7 @@
 
 class DebugProcess;
 
-class DebugCore
+class DebugCore : public std::enable_shared_from_this<DebugCore>
 {
 public:
     DebugCore();

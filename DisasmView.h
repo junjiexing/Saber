@@ -20,7 +20,7 @@ public slots:
     void gotoAddress(uint64_t address);
     void setRegion(uint64_t address);
     void analysis();
-    void setDebugCore(DebugCore* debugCore);
+    void setDebugCore(std::shared_ptr<DebugCore> debugCore);
 	void onRefresh();
     // QWidget interface
 protected:
@@ -35,7 +35,7 @@ private:
     uint64_t m_currentAddress;
     bool m_foundIndex;
 
-    DebugCore* m_debugCore;
+	std::weak_ptr<DebugCore> m_debugCore;
     // QWidget interface
 protected:
     void mousePressEvent(QMouseEvent *event) override;

@@ -47,12 +47,13 @@ void DisasmView::gotoAddress(uint64_t address)
 
 void DisasmView::setRegion(uint64_t address)
 {
-    if (!m_debugCore)
+	auto dbgcore = m_debugCore.lock();
+    if (!dbgcore)
     {
         log("setRegion without debugcore ptr", LogType::Warning);
         return;
     }
-    if (!m_debugCore->findRegion(address, m_regionStart, m_regionSize))
+    if (!dbgcore->findRegion(address, m_regionStart, m_regionSize))
     {
         log("DisasmView::setRegion findRegion failed", LogType::Error);
         return;
@@ -62,9 +63,14 @@ void DisasmView::setRegion(uint64_t address)
 
 void DisasmView::analysis()
 {
+	auto dbgcore = m_debugCore.lock();
+	if (!dbgcore)
+	{
+		return;
+	}
     log(QString("in analysis: %1, %2").arg(m_regionStart,0,16).arg(m_regionSize,0,16));
     std::vector<uint8_t> buf(m_regionSize);
-    if (!m_debugCore->readMemory(m_regionStart, buf.data(), buf.size()))
+    if (!dbgcore->readMemory(m_regionStart, buf.data(), buf.size()))
     {
         log("In DisasmView::analysis, readMemory failed", LogType::Warning);
         return;
@@ -87,6 +93,12 @@ void DisasmView::analysis()
 
 void DisasmView::paintEvent(QPaintEvent * e)
 {
+	auto dbgcore = m_debugCore.lock();
+	if (!dbgcore)
+	{
+		return;
+	}
+
     if (m_insnStart.size() <= verticalScrollBar()->value())
     {
         return;
@@ -114,13 +126,13 @@ void DisasmView::paintEvent(QPaintEvent * e)
         int size = std::min(15ull, m_regionStart + m_regionSize - addr);
         uint8_t buff[15];
         //FIXME:判断读取是否成功
-        m_debugCore->readMemory(addr, buff, size);
+		dbgcore->readMemory(addr, buff, size);
         x86dis_insn* insn = decoder.decode(buff, size, addr);
         const char* insnStr = decoder.str(insn, DIS_STYLE_HEX_ASMSTYLE | DIS_STYLE_HEX_UPPERCASE | DIS_STYLE_HEX_NOZEROPAD | DIS_STYLE_SIGNED | X86DIS_STYLE_EXPLICIT_MEMSIZE);
         //printf("0x%016" PRIX64 "\t%s\n", addr, pcsIns);
 
         QRect rc(0, i, viewport()->width(), h);
-		if (m_debugCore->findBreakpoint(addr))
+		if (dbgcore->findBreakpoint(addr))
 		{
 			p.fillRect(rc, Qt::red);
 		}
@@ -138,6 +150,12 @@ void DisasmView::paintEvent(QPaintEvent * e)
 
 void DisasmView::mousePressEvent(QMouseEvent *event)
 {
+	auto dbgcore = m_debugCore.lock();
+	if (!dbgcore)
+	{
+		return;
+	}
+
     if (m_insnStart.size() <= verticalScrollBar()->value())
     {
         return;
@@ -165,7 +183,7 @@ void DisasmView::mousePressEvent(QMouseEvent *event)
         int size = std::min(15ull, m_regionStart + m_regionSize - addr);
         uint8_t buff[15];
         //FIXME:判断读取是否成功
-        m_debugCore->readMemory(addr, buff, size);
+		dbgcore->readMemory(addr, buff, size);
         x86dis_insn* insn = decoder.decode(buff, size, addr);
 
         if (y >= i && y < i + h)
@@ -180,9 +198,8 @@ void DisasmView::mousePressEvent(QMouseEvent *event)
     QAbstractScrollArea::mousePressEvent(event);
 }
 
-void DisasmView::setDebugCore(DebugCore *debugCore)
+void DisasmView::setDebugCore(std::shared_ptr<DebugCore> debugCore)
 {
-	log(QString("on setDebugCore:%1").arg((uint64_t)debugCore));
     m_debugCore = debugCore;
 }
 

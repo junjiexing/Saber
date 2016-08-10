@@ -7,6 +7,7 @@
 #include <QObject>
 
 #include <vector>
+#include <memory>
 
 class DebugCore;
 
@@ -18,7 +19,7 @@ public:
 	static void registerMetaType();
 
 signals:
-	void setDebugCore(DebugCore* debugCore);
+	void setDebugCore(std::shared_ptr<DebugCore> debugCore);
     void setDisasmAddress(uint64_t addr);
 	void showMemoryMap(std::vector<MemoryRegion> regions);
 	void showRegisters(Register regs);

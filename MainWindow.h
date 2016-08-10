@@ -46,7 +46,7 @@ private:
 
     FlexWidget* center;
 
-    DebugCore* m_debugCore = nullptr;
+    std::shared_ptr<DebugCore> m_debugCore = nullptr;
 
     QStandardItemModel* m_memoryMapModel;
     RegisterModel* m_registerModel;

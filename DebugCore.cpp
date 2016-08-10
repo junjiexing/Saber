@@ -427,10 +427,10 @@ bool DebugCore::debugNew(const QString &path, const QString &args)
         return false;
     }
 
-    m_debugThread = std::thread([this]
+	auto self = shared_from_this();
+    m_debugThread = std::thread([this, self]
     {
         debugLoop();
-//        emit debugLoopFinished(p);
     });
     return true;
 }
