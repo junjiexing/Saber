@@ -135,11 +135,43 @@ void DisasmView::mousePressEvent(QMouseEvent *event)
         return;
     }
 
+//    x64dis decoder;
+//    uint64_t addr = m_insnStart[verticalScrollBar()->value()];
+//    auto y = event->pos().y();
+//
+//    int h = viewport()->fontMetrics().height();
+//    for (int i = 0; i < viewport()->height(); i += h)
+//    {
+//        if ((m_regionStart + m_regionSize) <= addr)
+//        {
+//            break;
+//        }
+//        int size = std::min(15ull, m_regionStart + m_regionSize - addr);
+//        uint8_t buff[15];
+//        m_debugCore->readMemory(addr, buff, size);
+//        x86dis_insn* insn = decoder.decode(buff, size, addr);
+//        if (y >= i && y < i + h)
+//        {
+//            m_hilightLine = addr;
+//            break;
+//        }
+//
+//        addr += insn->size;
+//    }
+
     x64dis decoder;
-    uint64_t addr = m_insnStart[verticalScrollBar()->value()];
-    auto y = event->pos().y();
+    uint64_t addr = 0;
+    if (!m_foundIndex)
+    {
+        addr = m_currentAddress;
+    }
+    else
+    {
+        addr = m_insnStart[verticalScrollBar()->value()];
+    }
 
     int h = viewport()->fontMetrics().height();
+    auto y = event->pos().y();
     for (int i = 0; i < viewport()->height(); i += h)
     {
         if ((m_regionStart + m_regionSize) <= addr)
@@ -148,16 +180,19 @@ void DisasmView::mousePressEvent(QMouseEvent *event)
         }
         int size = std::min(15ull, m_regionStart + m_regionSize - addr);
         uint8_t buff[15];
+        //FIXME:判断读取是否成功
         m_debugCore->readMemory(addr, buff, size);
         x86dis_insn* insn = decoder.decode(buff, size, addr);
+
+        QRect rc(0, i, viewport()->width(), h);
         if (y >= i && y < i + h)
         {
             m_hilightLine = addr;
             break;
         }
-
         addr += insn->size;
     }
+
     viewport()->update();
     QAbstractScrollArea::mousePressEvent(event);
 }

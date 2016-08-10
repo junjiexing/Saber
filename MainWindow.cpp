@@ -79,7 +79,11 @@ MainWidget::MainWidget(QWidget *parent)
 	addAction("debug.restart", menu->addAction(QIcon(":/icon/Resources/restart.png"), "重新启动", this, []
 	{
 
-	}, QKeySequence(Qt::Key_F8)));
+	}, QKeySequence(Qt::CTRL + Qt::Key_F2)));
+	addAction("debug.addBreakpoint", menu->addAction(QIcon(":/icon/Resources/breakpoint_enabled.png"), "添加断点", this, []
+	{
+
+	}, QKeySequence(Qt::Key_F2)));
 	addAction("debug.stepOver", menu->addAction(QIcon(":/icon/Resources/step_over.png"), "单步步过", this, []
 	{
 
