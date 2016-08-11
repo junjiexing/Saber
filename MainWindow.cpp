@@ -3,6 +3,7 @@
 #include "DisasmView.h"
 #include "EventDispatcher.h"
 #include "global.h"
+#include "AttachProcessList.h"
 
 #include <QtDockWidget.h>
 #include <QtFlexWidget.h>
@@ -79,6 +80,11 @@ MainWidget::MainWidget(QWidget *parent)
 			QMessageBox::warning(this, "错误", "请先选择要调试的程序");
 		}
 	}, QKeySequence(Qt::Key_F9)));
+	addAction("debug.attach", menu->addAction("附加", [this]
+	{
+		AttachProcessList dlg(this);
+		dlg.exec();
+	}));
 	addAction("debug.stop", menu->addAction(QIcon(":/icon/Resources/stop.png"), "停止", [this]
 	{
 		if (m_debugCore)
