@@ -59,7 +59,7 @@ DebugCore::DebugCore()
 
 DebugCore::~DebugCore()
 {
-    m_targetException.stop();
+    stop();
 }
 
 void DebugCore::refreshMemoryMap()
@@ -435,6 +435,36 @@ bool DebugCore::debugNew(const QString &path, const QString &args)
     return true;
 }
 
+bool DebugCore::attach(pid_t pid)
+{
+	m_pid = pid;
+	kern_return_t err = task_for_pid(mach_task_self(), m_pid, &m_task);
+	if (err != KERN_SUCCESS)
+	{
+		log(QString("task_for_pid() error: %1 附加目标进城失败").arg(mach_error_string(err)), LogType::Error);
+		return false;
+	}
+
+	if (!m_targetException.setExceptionPort(m_task, std::bind(&DebugCore::handleException, this, std::placeholders::_1)))
+	{
+		log("setExceptionPort failed, 附加目标进城失败", LogType::Error);
+		return false;
+	}
+
+	if (ptrace(PT_ATTACHEXC, pid, 0, 0) != 0)
+	{
+		log("ptrace PT_ATTACHEXC failed, 附加目标进城失败", LogType::Error);
+		return false;
+	}
+
+	auto self = shared_from_this();
+	m_debugThread = std::thread([this, self]
+	{
+		debugLoop();
+	});
+	return true;
+}
+
 void DebugCore::stop()
 {
 	auto ret = kill(m_pid, SIGKILL);
@@ -674,7 +704,6 @@ bool DebugCore::doContinueDebug()
 
     return ptrace(PT_CONTINUE, m_pid, (caddr_t)1, 0) == -1;
 }
-
 
 
 

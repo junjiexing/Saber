@@ -10,6 +10,7 @@
 #include <algorithm>
 
 #include <sys/time.h>
+#include <unistd.h>
 #include <libproc.h>
 
 AttachProcessList::AttachProcessList(QWidget *parent)
@@ -24,10 +25,24 @@ AttachProcessList::AttachProcessList(QWidget *parent)
 	table_->setSelectionBehavior(QAbstractItemView::SelectRows);
 	table_->horizontalHeader()->setStretchLastSection(true);
 	vlay->addWidget(table_);
+	connect(table_, &QTableWidget::itemSelectionChanged, [this]
+	{
+		auto item = table_->item(table_->currentRow(), 0);
+		m_currentPid = item->text().toInt();
+	});
 
 	auto btn_box = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
 	vlay->addWidget(btn_box);
-	connect(btn_box, &QDialogButtonBox::accepted, this, &AttachProcessList::accept);
+	connect(btn_box, &QDialogButtonBox::accepted, [this]
+	{
+		if (m_currentPid == 0)
+		{
+			QMessageBox::information(this, "提示", "请先选择要附加的进程");
+			return;
+		}
+
+		accept();
+	});
 	connect(btn_box, &QDialogButtonBox::rejected, this, &AttachProcessList::reject);
 
 	refresh();
@@ -47,7 +62,21 @@ void AttachProcessList::refresh()
 		return;
 	}
 
-	pids.erase(std::remove(pids.begin(), pids.end(), 0), pids.end());	//XXX: 为什么会有很多pid为0?
+	auto it = std::remove_if(pids.begin(), pids.end(), [](auto pid)
+	{
+		if (pid == 0)
+		{
+			return true;
+		}
+
+		if (getpgid(pid) < 0)
+		{
+			return true;
+		}
+
+		return false;
+	});
+	pids.erase(it, pids.end());	//XXX: 为什么会有很多pid为0?
 
 	table_->setRowCount(pids.size());
 	for (std::size_t i = 0; i < pids.size(); ++i)

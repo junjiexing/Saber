@@ -34,6 +34,7 @@ public:
     bool writeMemory(mach_vm_address_t address, const void* buffer, mach_vm_size_t size, bool bypassBreakpoint = true);
 
     bool debugNew(const QString &path, const QString &args);
+	bool attach(pid_t pid);
 	void stop();
     void continueDebug();
     void stepIn();

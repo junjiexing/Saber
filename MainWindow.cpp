@@ -83,7 +83,19 @@ MainWidget::MainWidget(QWidget *parent)
 	addAction("debug.attach", menu->addAction("附加", [this]
 	{
 		AttachProcessList dlg(this);
-		dlg.exec();
+		dlg.resize(900, 600);
+		if (dlg.exec() != QDialog::Accepted)
+		{
+			return;
+		}
+
+		m_debugCore = std::make_shared<DebugCore>();
+		emit EventDispatcher::instance()->setDebugCore(m_debugCore);
+
+		if (!m_debugCore->attach(dlg.currentPid()))
+		{
+			QMessageBox::warning(this, "错误", "附加到指定进程失败");
+		}
 	}));
 	addAction("debug.stop", menu->addAction(QIcon(":/icon/Resources/stop.png"), "停止", [this]
 	{
