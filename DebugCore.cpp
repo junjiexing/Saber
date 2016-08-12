@@ -465,6 +465,11 @@ bool DebugCore::attach(pid_t pid)
 	return true;
 }
 
+bool DebugCore::pause()
+{
+	return kill(m_pid, SIGINT) == 0;
+}
+
 void DebugCore::stop()
 {
 	auto ret = kill(m_pid, SIGKILL);
@@ -709,7 +714,6 @@ bool DebugCore::doContinueDebug()
 
     return ptrace(PT_CONTINUE, m_pid, (caddr_t)1, 0) == -1;
 }
-
 
 
 

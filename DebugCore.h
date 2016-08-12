@@ -35,6 +35,7 @@ public:
 
     bool debugNew(const QString &path, const QString &args);
 	bool attach(pid_t pid);
+	bool pause();
 	void stop();
     void continueDebug();
     void stepIn();

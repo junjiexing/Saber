@@ -97,6 +97,16 @@ MainWidget::MainWidget(QWidget *parent)
 			QMessageBox::warning(this, "错误", "附加到指定进程失败");
 		}
 	}));
+	addAction("debug.pause", menu->addAction(QIcon(":/icon/Resources/pause.png"), "暂停", [this]
+	{
+		if (!m_debugCore)
+		{
+			QMessageBox::information(this, "提示", "请先加载要调试的目标程序");
+			return;
+		}
+
+		m_debugCore->pause();
+	}));
 	addAction("debug.stop", menu->addAction(QIcon(":/icon/Resources/stop.png"), "停止", [this]
 	{
 		if (m_debugCore)
