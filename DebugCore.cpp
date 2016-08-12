@@ -547,6 +547,11 @@ bool DebugCore::handleException(ExceptionInfo const&info)
                     //TODO: 有多个子进程应该如何处理?
                     addOrEnableBreakpoint(getEntryPoint(), false, true);
                 }
+				else
+				{
+					emit EventDispatcher::instance()->setDisasmAddress(info.exceptionAddr);
+					waitForContinue();
+				}
                 ptrace(PT_CONTINUE, m_pid, (caddr_t)1, 0);
             }
             else if (info.exceptionData.size() >=1 && info.exceptionData[0] == 1)
