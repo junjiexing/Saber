@@ -427,6 +427,7 @@ bool DebugCore::debugNew(const QString &path, const QString &args)
         return false;
     }
 
+	m_isAttach = false;
 	auto self = shared_from_this();
     m_debugThread = std::thread([this, self]
     {
@@ -457,6 +458,7 @@ bool DebugCore::attach(pid_t pid)
 		return false;
 	}
 
+	m_isAttach = true;
 	auto self = shared_from_this();
 	m_debugThread = std::thread([this, self]
 	{
@@ -472,24 +474,43 @@ bool DebugCore::pause()
 
 void DebugCore::stop()
 {
+	if (m_pid == 0)
+	{
+		return;
+	}
+
 	auto ret = kill(m_pid, SIGKILL);
 	if (ret != 0)
 	{
 		log(QString("Stop debug SIGKILL failed: %1").arg(ret), LogType::Warning);
 	}
+	m_targetException.stop();
 
-	ret = ptrace(PT_KILL, m_pid, 0, 0);
-	if (ret != -1)
+	if (m_isAttach)
 	{
-		log(QString("Stop debug ptrace kill failed: %1").arg(ret), LogType::Error);
-		return;
+		//TODO: 删除所有断点
+		if (ptrace(PT_DETACH, m_pid, (caddr_t)1, 0) != 0)
+		{
+			log("Stop debug detach failed", LogType::Error);
+			return;
+		}
+	}
+	else
+	{
+		ret = ptrace(PT_KILL, m_pid, 0, 0);
+		if (ret != -1)
+		{
+			log(QString("Stop debug ptrace kill failed: %1").arg(ret), LogType::Error);
+			return;
+		}
 	}
 
-	m_targetException.stop();
 	if (m_debugThread.joinable())
 	{
 		m_debugThread.join();
 	}
+
+	m_pid = 0;
 }
 
 void DebugCore::debugLoop()

@@ -64,6 +64,7 @@ private:
     pid_t m_pid;
 	mach_port_t m_currThread = 0;
     mach_port_t m_task;
+	bool m_isAttach;
 
 	std::thread m_debugThread;
 

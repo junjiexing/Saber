@@ -154,6 +154,7 @@ bool TargetException::run()
 
 void TargetException::stop()
 {
+	//TODO:detach时需要将原来的exception port恢复
     m_stop = true;
     mach_port_destroy(mach_task_self(), m_exceptionPort);
 }
