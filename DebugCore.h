@@ -52,6 +52,7 @@ public:
 	bool removeBreakpoint(BreakpointPtr bp);
     bool addOrEnableBreakpoint(uint64_t address, bool isHardware = false, bool oneTime = false);
     BreakpointPtr findBreakpoint(uint64_t address);
+	std::vector<BreakpointPtr> const& breakpoints(){ return m_breakpoints; }
 private:
     void debugLoop();
     bool handleException(ExceptionInfo const& info);

@@ -24,5 +24,6 @@ signals:
 	void showMemoryMap(std::vector<MemoryRegion> regions);
 	void showRegisters(Register regs);
 	void refreshDisasmView();
+	void breakpointChanged();
 };
 

@@ -4,6 +4,7 @@
 #include "EventDispatcher.h"
 #include "global.h"
 #include "AttachProcessList.h"
+#include "BreakpointView.h"
 
 #include <QtDockWidget.h>
 #include <QtFlexWidget.h>
@@ -58,9 +59,9 @@ MainWidget::MainWidget(QWidget *parent)
 	}, QKeySequence(Qt::ALT + Qt::Key_C)));
 	addAction("view.memoryMapView", menu->addAction("内存映射窗口窗口", [this]{activeOrAddDockWidget(Flex::ToolView,"内存映射",Flex::B0,0,center);}));
 	addAction("view.watchView", menu->addAction("监视窗口", []{}));
-	addAction("view.breakpointView", menu->addAction(QIcon(":/icon/Resources/breakpoint_enabled.png"), "断点窗口", []
+	addAction("view.breakpointView", menu->addAction(QIcon(":/icon/Resources/breakpoint_enabled.png"), "断点窗口", [this]
 	{
-
+		activeOrAddDockWidget(Flex::ToolView,"断点",Flex::B0,0,center);
 	}, QKeySequence(Qt::ALT + Qt::Key_B)));
 	addAction("view.outputView", menu->addAction(QIcon(":/icon/Resources/log_view.png"), "输出窗口", [this]
 	{
@@ -355,10 +356,22 @@ void MainWidget::onDockEidgetCreated(DockWidget *widget)
 		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDebugCore, view, &DisasmView::setDebugCore);
 		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDisasmAddress, view, &DisasmView::gotoAddress);
 		QObject::connect(EventDispatcher::instance(), &EventDispatcher::refreshDisasmView, view, &DisasmView::onRefresh);
+		QObject::connect(EventDispatcher::instance(), &EventDispatcher::breakpointChanged, view, &DisasmView::onRefresh);
 		view->setDebugCore(m_debugCore);
 		view->gotoAddress(g_highlightAddress);
         widget->attachWidget(view);
     }
+	else if (title == "断点")
+	{
+		auto view = new BreakpointView(widget);
+		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDebugCore, view, &BreakpointView::setDebugCore);
+		QObject::connect(EventDispatcher::instance(),
+						 &EventDispatcher::breakpointChanged,
+						 view,
+						 &BreakpointView::refreshBpList);
+		view->setDebugCore(m_debugCore);
+		widget->attachWidget(view);
+	}
 	else
 	{
 		widget->attachWidget(new QTextEdit(widget->windowTitle(), widget));

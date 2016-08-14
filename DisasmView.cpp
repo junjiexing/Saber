@@ -132,9 +132,17 @@ void DisasmView::paintEvent(QPaintEvent * e)
         //printf("0x%016" PRIX64 "\t%s\n", addr, pcsIns);
 
         QRect rc(0, i, viewport()->width(), h);
-		if (dbgcore->findBreakpoint(addr))
+		auto bp = dbgcore->findBreakpoint(addr);
+		if (bp)
 		{
-			p.fillRect(rc, Qt::red);
+			if (bp->enabled())
+			{
+				p.fillRect(rc, Qt::red);
+			}
+			else
+			{
+				p.fillRect(rc, QColor(255, 170, 255));
+			}
 		}
         else if (addr == g_highlightAddress)
         {

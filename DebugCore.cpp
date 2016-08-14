@@ -372,6 +372,7 @@ bool DebugCore::addBreakpoint(uint64_t address, bool enabled, bool isHardware, b
     }
 
     m_breakpoints.emplace_back(bp);
+	emit EventDispatcher::instance()->breakpointChanged();
     return true;
 }
 
@@ -392,7 +393,7 @@ bool DebugCore::removeBreakpoint(uint64_t address)
 	}
 
 	m_breakpoints.erase(it);
-
+	emit EventDispatcher::instance()->breakpointChanged();
 	return true;
 }
 bool DebugCore::removeBreakpoint(DebugCore::BreakpointPtr bp)

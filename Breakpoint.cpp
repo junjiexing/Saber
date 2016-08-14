@@ -1,6 +1,8 @@
 #include "Breakpoint.h"
 #include "DebugCore.h"
 #include "Log.h"
+#include "EventDispatcher.h"
+#include "utils.h"
 
 Breakpoint::Breakpoint(DebugCore *debugCore)
     :m_debugCore(debugCore)
@@ -12,6 +14,8 @@ const uint8_t Breakpoint::bpData = 0xCC;
 
 bool Breakpoint::setEnabled(bool enabled)
 {
+	auto _ = finally([] { emit EventDispatcher::instance()->breakpointChanged(); });
+
     log(QString("bp set enabled: %1").arg(enabled));
     if (enabled == m_enabled)
     {
