@@ -124,8 +124,7 @@ MainWidget::MainWidget(QWidget *parent)
 			return;
 		}
 
-		auto bp = m_debugCore->findBreakpoint(g_highlightAddress);
-		if (bp)
+		if (m_debugCore->findBreakpoint(g_highlightAddress))
 		{
 			if (!m_debugCore->removeBreakpoint(g_highlightAddress))
 			{

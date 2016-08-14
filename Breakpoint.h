@@ -9,8 +9,9 @@ class Breakpoint
 {
 public:
     Breakpoint(DebugCore* debugCore);
+	~Breakpoint();
     Breakpoint(const Breakpoint&) = delete;
-    Breakpoint(Breakpoint&&) = default;
+    Breakpoint(Breakpoint&&) = delete;
 
     uint64_t address() const
     {

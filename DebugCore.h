@@ -46,6 +46,7 @@ public:
     void getAllSegment();
 
     using BreakpointPtr = std::shared_ptr<Breakpoint>;
+	using BreakpointWeakPtr = std::weak_ptr<Breakpoint>;
     bool addBreakpoint(uint64_t address, bool enabled = true, bool isHardware = false, bool oneTime = false);
 	bool removeBreakpoint(uint64_t address);
 	bool removeBreakpoint(BreakpointPtr bp);

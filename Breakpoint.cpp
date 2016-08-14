@@ -63,3 +63,8 @@ bool Breakpoint::setEnabled(bool enabled)
     return true;
 }
 
+Breakpoint::~Breakpoint()
+{
+    setEnabled(false);
+}
+
