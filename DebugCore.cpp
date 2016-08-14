@@ -647,7 +647,6 @@ void DebugCore::waitForContinue()
     m_continueCV.wait(lock);
 }
 
-//FIXME:如果在界面修改了寄存器,这里会覆盖掉
 bool DebugCore::handleBreakpoint(ExceptionInfo const &info)
 {
     x86_thread_state64_t state;
