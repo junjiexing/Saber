@@ -84,5 +84,7 @@ private:
 	bool doContinueDebug();
 
 	DebugProcess* m_process;
+
+	BreakpointPtr m_currentHitBP;
 };
 

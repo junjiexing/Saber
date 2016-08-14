@@ -647,6 +647,7 @@ void DebugCore::waitForContinue()
     m_continueCV.wait(lock);
 }
 
+//FIXME:如果在界面修改了寄存器,这里会覆盖掉
 bool DebugCore::handleBreakpoint(ExceptionInfo const &info)
 {
     x86_thread_state64_t state;
@@ -659,19 +660,32 @@ bool DebugCore::handleBreakpoint(ExceptionInfo const &info)
     }
     log(QString("rip: 0x%1").arg(state.__rip, 0, 16));
 
-    if (info.exceptionData[0] == 1)
+    if (info.exceptionData[0] == 1)	//单步
     {
+		if (m_currentHitBP)
+		{
+			assert(!m_currentHitBP->enabled());
+			m_currentHitBP->setEnabled(true);
+			m_currentHitBP.reset();
+		}
+
+		if (!m_stepIn)
+		{
+			return doContinueDebug();
+		}
         emit EventDispatcher::instance()->setDisasmAddress(state.__rip);
         waitForContinue();
 
         return doContinueDebug();
     }
 
+	//int3 断点
     --state.__rip;
 
     auto bp = findBreakpoint(state.__rip);
     if (!bp)
     {
+		//这个断点并非我们调试器所加的,
         log(QString("Un known breakpoint at 0x%1").arg(state.__rip), LogType::Warning);
         ++state.__rip; //TODO:这里会导致反汇编窗口显示int3指令之后的一条指令,反汇编窗口应当将int3指令显示出来
     }
@@ -682,21 +696,22 @@ bool DebugCore::handleBreakpoint(ExceptionInfo const &info)
 			log(QString("删除一次性断点 0x%1 失败").arg(bp->address(), 0, 16), LogType::Warning);
 		}
 	}
-    else if (!bp->setEnabled(false))
-    {
-        log("disable breakpoint failed", LogType::Error);
-        //TODO: 询问用户是将异常传递给程序还是从断点指令下一条指令执行
-    }
 
-    emit EventDispatcher::instance()->setDisasmAddress(state.__rip);
+	err = thread_set_state(info.threadPort, x86_THREAD_STATE64, (thread_state_t)&state, stateCount);
+	if (err != KERN_SUCCESS)
+	{
+		log(QString("In handleBreakpoint, thread_set_state failed: %1").arg(mach_error_string(err)), LogType::Error);
+		return false;
+	}
+
+	emit EventDispatcher::instance()->setDisasmAddress(state.__rip);
     waitForContinue();
 
-    err = thread_set_state(info.threadPort, x86_THREAD_STATE64, (thread_state_t)&state, stateCount);
-    if (err != KERN_SUCCESS)
-    {
-        log(QString("In handleBreakpoint, thread_set_state failed: %1").arg(mach_error_string(err)), LogType::Error);
-        return false;
-    }
+	if (m_currentHitBP)
+	{
+		m_stepIn = true;
+	}
+
     return doContinueDebug();
 }
 
@@ -716,7 +731,19 @@ bool DebugCore::doContinueDebug()
         return false;
     }
 
-    if (m_stepIn)
+	//查找要继续运行的地址上是否有断点
+	//如果有断点,需要先禁用该断点,然后单步执行
+	//除服单步异常后,重新启用该断点
+	m_currentHitBP = findBreakpoint(state.__rip);
+	if (m_currentHitBP)
+	{
+		if (!m_currentHitBP->setEnabled(false))
+		{
+			log("disable breakpoint failed", LogType::Error);
+			//TODO: 询问用户是将异常传递给程序还是从断点指令下一条指令执行
+		}
+	}
+    if (m_stepIn || m_currentHitBP)
     {
         state.__rflags |= (1 << 8);
     }
