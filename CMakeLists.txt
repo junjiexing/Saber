@@ -26,15 +26,28 @@ set(SOURCE_FILES
         QtFlex5/QtFlexWidget.cpp
         resource.qrc
 
+        qhexview/qhexview.cpp
+
         Breakpoint.cpp
         DebugCore.cpp
         DisasmView.cpp
         libasmx64.cpp
         RegisterModel.cpp
-
         mach_excServer.c
         mach_excUser.c
-        TargetException.cpp TargetException.h Log.cpp Log.h EventDispatcher.cpp EventDispatcher.h global.cpp AttachProcessList.cpp AttachProcessList.h BreakpointView.cpp BreakpointView.h utils.h)
+        TargetException.cpp
+        TargetException.h
+        Log.cpp
+        Log.h
+        EventDispatcher.cpp
+        EventDispatcher.h
+        global.cpp
+        AttachProcessList.cpp
+        AttachProcessList.h
+        BreakpointView.cpp
+        BreakpointView.h
+        utils.h
+)
 
 include_directories(
         ${Qt5Widgets_INCLUDES}
@@ -42,6 +55,7 @@ include_directories(
         ${Qt5Gui_INCLUDE_DIRS}
         ${Qt5Gui_PRIVATE_INCLUDE_DIRS}
         ${CMAKE_SOURCE_DIR}/QtFlex5
+        ${CMAKE_SOURCE_DIR}/qhexview
 )
 
 
