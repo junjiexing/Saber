@@ -25,5 +25,6 @@ signals:
 	void showRegisters(Register regs);
 	void refreshDisasmView();
 	void breakpointChanged();
+	void setMemoryViewAddress(uint64_t address);
 };
 

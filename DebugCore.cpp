@@ -140,9 +140,33 @@ bool DebugCore::findRegion(uint64_t address, uint64_t &start, uint64_t &size)
 
 bool DebugCore::readMemory(mach_vm_address_t address, void* buffer, mach_vm_size_t size, bool bypassBreakpoint)
 {
+	mach_vm_address_t regionAddress = address;
+	mach_vm_size_t regionSize = 0;
+	natural_t depth = 0;
+	vm_region_submap_short_info_data_64_t info;
+	mach_msg_type_number_t count = VM_REGION_SUBMAP_INFO_COUNT_64;
+
+	kern_return_t kr = mach_vm_region_recurse(m_task, &regionAddress, &regionSize, &depth, (vm_region_recurse_info_t)&info, &count);
+	if (kr != KERN_SUCCESS)
+	{
+		log(QString("读取内存失败，mach_vm_region_recurse：").append(mach_error_string(kr)), LogType::Warning);
+		return false;
+	}
+
+	//outputMessage(QString("region: %1").arg(regionAddress, 0, 16), MessageType::Info);
+	if ((info.protection & VM_PROT_READ) == 0)
+	{
+		kr = mach_vm_protect(m_task, address, size, 0, info.protection | VM_PROT_READ);
+		if (kr != KERN_SUCCESS)
+		{
+			log(QString("读取内存失败，mach_vm_protect：").append(mach_error_string(kr)), LogType::Warning);
+			return false;
+		}
+	}
+
     /* read memory - vm_read_overwrite because we supply the buffer */
     mach_vm_size_t nread;
-    kern_return_t kr = mach_vm_read_overwrite(m_task, address, size, (mach_vm_address_t)buffer, &nread);
+    kr = mach_vm_read_overwrite(m_task, address, size, (mach_vm_address_t)buffer, &nread);
     if (kr != KERN_SUCCESS)
     {
         log(QString("mach_vm_read_overwrite failed at address: 0x%1 with error: %2").arg(address, 0, 16).arg(mach_error_string(kr)), LogType::Warning);
@@ -168,6 +192,7 @@ bool DebugCore::readMemory(mach_vm_address_t address, void* buffer, mach_vm_size
 		}
 	}
 
+	//TODO:还原内存属性
 	return true;
 }
 
@@ -264,14 +289,12 @@ mach_vm_address_t DebugCore::findBaseAddress()
     }
 }
 
-mach_vm_address_t DebugCore::getEntryPoint()
+void DebugCore::getEntryAndDataAddr()
 {
-
     mach_vm_address_t aslrBase = findBaseAddress();
     mach_header header = {0};
     //TODO:
     readMemory(aslrBase, &header, sizeof(header));
-    log(QString("Magic:%1, ncmds: %2").arg(header.magic).arg(header.ncmds), LogType::Info);
 
     std::vector<char> cmdBuff(header.sizeofcmds);
     auto p = cmdBuff.data();
@@ -283,14 +306,28 @@ mach_vm_address_t DebugCore::getEntryPoint()
         if (cmd->cmd == LC_MAIN)
         {
             entry_point_command* epcmd = (entry_point_command*)p;
-            uint64_t entryoff = aslrBase + epcmd->entryoff;
-            log(QString("aslr base: 0x%1, entry: 0x%2").arg(QString::number(aslrBase, 16)).arg(QString::number(entryoff, 16)), LogType::Info);
-            return entryoff;
+            m_entryAddr = aslrBase + epcmd->entryoff;
+            log(QString("aslr base: 0x%1, entry: 0x%2").arg(QString::number(aslrBase, 16)).arg(QString::number(m_entryAddr, 16)), LogType::Info);
         }
+		if (cmd->cmd == LC_SEGMENT_64)
+		{
+			segment_command_64* segcmd = (segment_command_64*)p;
+			if (std::strncmp(segcmd->segname, SEG_DATA, 6) == 0)
+			{
+				for (int j = 0; j < segcmd->nsects; ++j)
+				{
+					auto secloc = p + sizeof(segment_command_64) + j * sizeof(section_64);
+					section_64* sec = (section_64*)secloc;
+					if (std::strncmp(sec->sectname, SECT_DATA, 6) == 0)
+					{
+						m_dataAddr = aslrBase + sec->addr;
+						log(QString("__data section addr is %1").arg(m_dataAddr));
+					}
+				}
+			}
+		}
         p += cmd->cmdsize;
     }
-
-    return 0;
 }
 
 Register DebugCore::getAllRegisterState(task_t thread)
@@ -572,7 +609,9 @@ bool DebugCore::handleException(ExceptionInfo const&info)
                 {
                     //当子进程执行exec系列函数时会产生sigtrap信号
                     //TODO: 有多个子进程应该如何处理?
-                    addOrEnableBreakpoint(getEntryPoint(), false, true);
+					getEntryAndDataAddr();
+                    addOrEnableBreakpoint(m_entryAddr, false, true);
+					emit EventDispatcher::instance()->setMemoryViewAddress(m_dataAddr);
                 }
 				else
 				{
@@ -602,7 +641,8 @@ bool DebugCore::handleException(ExceptionInfo const&info)
         case EXC_RESOURCE:
         case EXC_GUARD:
         case EXC_CORPSE_NOTIFY:
-            emit EventDispatcher::instance()->setDisasmAddress(getAllRegisterState(info.threadPort).rip);
+			m_excAddr = getAllRegisterState(info.threadPort).rip;
+            emit EventDispatcher::instance()->setDisasmAddress(m_excAddr);
             waitForContinue();
             //TODO:如果用户处理了异常应该返回true阻止程序自己处理异常
             return false;
@@ -672,7 +712,9 @@ bool DebugCore::handleBreakpoint(ExceptionInfo const &info)
 		{
 			return doContinueDebug();
 		}
-        emit EventDispatcher::instance()->setDisasmAddress(state.__rip);
+
+		m_excAddr = state.__rip;
+        emit EventDispatcher::instance()->setDisasmAddress(m_excAddr);
         waitForContinue();
 
         return doContinueDebug();
@@ -680,13 +722,14 @@ bool DebugCore::handleBreakpoint(ExceptionInfo const &info)
 
 	//int3 断点
     --state.__rip;
+	m_excAddr = state.__rip;
 
     auto bp = findBreakpoint(state.__rip);
     if (!bp)
     {
 		//这个断点并非我们调试器所加的,
         log(QString("Un known breakpoint at 0x%1").arg(state.__rip), LogType::Warning);
-        ++state.__rip; //TODO:这里会导致反汇编窗口显示int3指令之后的一条指令,反汇编窗口应当将int3指令显示出来
+        ++state.__rip;
     }
 	else if (bp->isOneTime())
 	{
@@ -703,7 +746,7 @@ bool DebugCore::handleBreakpoint(ExceptionInfo const &info)
 		return false;
 	}
 
-	emit EventDispatcher::instance()->setDisasmAddress(state.__rip);
+	emit EventDispatcher::instance()->setDisasmAddress(m_excAddr);
     waitForContinue();
 
 	if (m_currentHitBP)

@@ -40,7 +40,7 @@ public:
     void continueDebug();
     void stepIn();
     mach_vm_address_t findBaseAddress();
-    mach_vm_address_t getEntryPoint();
+    void getEntryAndDataAddr();
     Register getAllRegisterState(task_t thread);
 
     void getAllSegment();
@@ -53,6 +53,9 @@ public:
     bool addOrEnableBreakpoint(uint64_t address, bool isHardware = false, bool oneTime = false);
     BreakpointPtr findBreakpoint(uint64_t address);
 	std::vector<BreakpointPtr> const& breakpoints(){ return m_breakpoints; }
+	uint64_t excAddr() { return m_excAddr; }
+	uint64_t entryAddr() { return m_entryAddr; }
+	uint64_t dataAddr() { return m_dataAddr; }
 private:
     void debugLoop();
     bool handleException(ExceptionInfo const& info);
@@ -79,6 +82,10 @@ private:
     void waitForContinue();
     std::mutex m_continueMtx;
     std::condition_variable m_continueCV;
+
+	uint64_t m_excAddr = 0;
+	uint64_t m_entryAddr = 0;
+	uint64_t m_dataAddr = 0;
 
 	bool m_stepIn = false;
 	bool doContinueDebug();

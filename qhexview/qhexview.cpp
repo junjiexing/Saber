@@ -549,12 +549,19 @@ void QHexView::updateScrollbars() {
 // Desc: scrolls view to given byte offset
 //------------------------------------------------------------------------------
 void QHexView::scrollTo(address_t offset) {
+	log(QString("scroll toaddress: %1").arg(offset));
 	if (offset < address_offset_ || offset >= (address_offset_ + dataSize()))
 	{
 		auto debugCore = m_debugCore.lock();
 		uint64_t start, size;
-		if (!debugCore || !debugCore->findRegion(offset, start, size))
+		if (!debugCore)
 		{
+			return;
+		}
+
+		if (!debugCore->findRegion(offset, start, size))
+		{
+			log("findRegion failed in QHexView::scrollTo", LogType::Error);
 			return;
 		}
 

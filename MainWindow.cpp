@@ -31,9 +31,9 @@ MainWidget::MainWidget(QWidget *parent)
 	{
 		onFileOpen();
 	}, QKeySequence::New));
-	addAction("file.exit", menu->addAction(QIcon(":/icon/Resources/close.png"), "退出", []
+	addAction("file.exit", menu->addAction(QIcon(":/icon/Resources/close.png"), "退出", [this]
 	{
-
+		close();
 	}, QKeySequence::Close));
 	menuBar()->addMenu(menu);
 
@@ -354,12 +354,15 @@ void MainWidget::onDockEidgetCreated(DockWidget *widget)
     else if (title == "反汇编")
     {
         auto view = new DisasmView(widget);
+		view->setDebugCore(m_debugCore);
+		if (m_debugCore)
+		{
+			view->gotoAddress(m_debugCore->excAddr());
+		}
 		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDebugCore, view, &DisasmView::setDebugCore);
 		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDisasmAddress, view, &DisasmView::gotoAddress);
 		QObject::connect(EventDispatcher::instance(), &EventDispatcher::refreshDisasmView, view, &DisasmView::onRefresh);
 		QObject::connect(EventDispatcher::instance(), &EventDispatcher::breakpointChanged, view, &DisasmView::onRefresh);
-		view->setDebugCore(m_debugCore);
-		view->gotoAddress(g_highlightAddress);
         widget->attachWidget(view);
     }
 	else if (title == "断点")
@@ -377,7 +380,12 @@ void MainWidget::onDockEidgetCreated(DockWidget *widget)
 	{
 		auto view = new QHexView(this);
 		view->setDebugCore(m_debugCore);
+		if (m_debugCore)
+		{
+			view->scrollTo(m_debugCore->dataAddr());
+		}
 		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDebugCore, view, &QHexView::setDebugCore);
+		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setMemoryViewAddress, view, &QHexView::scrollTo);
 		widget->attachWidget(view);
 	}
 	else

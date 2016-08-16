@@ -100,7 +100,6 @@ public:
 
 //	void setData(QIODevice *d);
 	void setAddressOffset(address_t offset);
-	void scrollTo(address_t offset);
 	void setAddressSize(AddressSize address_size);
 	void setColdZoneEnd(address_t offset);
 
@@ -118,6 +117,7 @@ public Q_SLOTS:
 	void mnuSetFont();
 	void mnuCopy();
 	void setDebugCore(std::shared_ptr<DebugCore> debugCore);
+	void scrollTo(address_t offset);
 
 private:
 	QString formatAddress(address_t address);
