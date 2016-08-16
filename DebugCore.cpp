@@ -2,6 +2,7 @@
 #include "TargetException.h"
 #include "EventDispatcher.h"
 #include "Log.h"
+#include "utils.h"
 
 #include <vector>
 
@@ -110,16 +111,17 @@ void DebugCore::refreshMemoryMap()
 
 bool DebugCore::findRegion(uint64_t address, uint64_t &start, uint64_t &size)
 {
+	//TODO: 将内存映射窗口改为手动刷新,这里删掉
     refreshMemoryMap();
-    for (auto region : m_memoryRegions)
-    {
-        if (region.start <= address && (region.start + region.size) >= address)
-        {
-            start = region.start;
-            size = region.size;
-            return true;
-        }
-    }
+//    for (auto region : m_memoryRegions)
+//    {
+//        if (region.start <= address && (region.start + region.size) >= address)
+//        {
+//            start = region.start;
+//            size = region.size;
+//            return true;
+//        }
+//    }
 
     mach_vm_address_t _start = address;
     mach_vm_size_t _size = 0;
@@ -145,6 +147,20 @@ bool DebugCore::readMemory(mach_vm_address_t address, void* buffer, mach_vm_size
 	natural_t depth = 0;
 	vm_region_submap_short_info_data_64_t info;
 	mach_msg_type_number_t count = VM_REGION_SUBMAP_INFO_COUNT_64;
+	bool needRestore = false;
+	auto _ = finally([this, &needRestore, &address, &size, &info]
+	{
+		if (!needRestore)
+		{
+			return;
+		}
+		log("restore");
+		kern_return_t kr = mach_vm_protect(m_task, address, size, 0, info.protection);
+		if (kr != KERN_SUCCESS)
+		{
+			log(QString("mach_vm_protect还原内存属性失败：").append(mach_error_string(kr)), LogType::Warning);
+		}
+	});
 
 	kern_return_t kr = mach_vm_region_recurse(m_task, &regionAddress, &regionSize, &depth, (vm_region_recurse_info_t)&info, &count);
 	if (kr != KERN_SUCCESS)
@@ -162,6 +178,7 @@ bool DebugCore::readMemory(mach_vm_address_t address, void* buffer, mach_vm_size
 			log(QString("读取内存失败，mach_vm_protect：").append(mach_error_string(kr)), LogType::Warning);
 			return false;
 		}
+		needRestore = true;
 	}
 
     /* read memory - vm_read_overwrite because we supply the buffer */
@@ -192,7 +209,6 @@ bool DebugCore::readMemory(mach_vm_address_t address, void* buffer, mach_vm_size
 		}
 	}
 
-	//TODO:还原内存属性
 	return true;
 }
 
@@ -203,7 +219,20 @@ bool DebugCore::writeMemory(mach_vm_address_t address, const void *buffer, mach_
     natural_t depth = 0;
     vm_region_submap_short_info_data_64_t info;
     mach_msg_type_number_t count = VM_REGION_SUBMAP_INFO_COUNT_64;
-
+	bool needRestore = false;
+	auto _ = finally([this, &needRestore, &address, &size, &info]
+	{
+		if (!needRestore)
+		{
+			return;
+		}
+		log("restore");
+		kern_return_t kr = mach_vm_protect(m_task, address, size, 0, info.protection);
+		if (kr != KERN_SUCCESS)
+		{
+			log(QString("mach_vm_protect还原内存属性失败：").append(mach_error_string(kr)), LogType::Warning);
+		}
+	});
     kern_return_t kr = mach_vm_region_recurse(m_task, &regionAddress, &regionSize, &depth, (vm_region_recurse_info_t)&info, &count);
     if (kr != KERN_SUCCESS)
     {
@@ -220,6 +249,8 @@ bool DebugCore::writeMemory(mach_vm_address_t address, const void *buffer, mach_
             log(QString("写入内存失败，mach_vm_protect：").append(mach_error_string(kr)), LogType::Warning);
             return false;
         }
+
+		needRestore = true;
     }
 
     kr = mach_vm_write(m_task, address, (vm_offset_t)buffer, size);
@@ -589,23 +620,27 @@ void DebugCore::debugLoop()
 
 bool DebugCore::handleException(ExceptionInfo const&info)
 {
-    auto str = QString("Exception: %1, Data size %2").arg(info.exceptionType).arg(info.exceptionData.size());
-    for (auto it : info.exceptionData)
+	m_excInfo = info;
+    auto str = QString("Exception: %1, Data size %2").arg(m_excInfo.exceptionType).arg(m_excInfo.exceptionData.size());
+    for (auto it : m_excInfo.exceptionData)
     {
         str += "," + QString::number(it, 16);
     }
 
     log(str, LogType::Info);
-    m_currThread = info.threadPort;
+    m_currThread = m_excInfo.threadPort;
 
-    emit EventDispatcher::instance()->showRegisters(getAllRegisterState(info.threadPort));
-    switch (info.exceptionType)
+	auto regInfo = getAllRegisterState(m_excInfo.threadPort);
+    emit EventDispatcher::instance()->showRegisters(regInfo);
+	m_stackAddr = regInfo.rsp;
+	emit EventDispatcher::instance()->setStackAddress(m_stackAddr);
+    switch (m_excInfo.exceptionType)
     {
         case EXC_SOFTWARE:
-            if (info.exceptionData.size() == 2 && info.exceptionData[0] == EXC_SOFT_SIGNAL)
+            if (m_excInfo.exceptionData.size() == 2 && m_excInfo.exceptionData[0] == EXC_SOFT_SIGNAL)
             {
                 //调试目标的signal, data[1]为signal的值
-                if (info.exceptionData[1] == SIGTRAP)
+                if (m_excInfo.exceptionData[1] == SIGTRAP)
                 {
                     //当子进程执行exec系列函数时会产生sigtrap信号
                     //TODO: 有多个子进程应该如何处理?
@@ -615,20 +650,20 @@ bool DebugCore::handleException(ExceptionInfo const&info)
                 }
 				else
 				{
-					emit EventDispatcher::instance()->setDisasmAddress(info.exceptionAddr);
+					emit EventDispatcher::instance()->setDisasmAddress(m_excInfo.exceptionAddr);
 					waitForContinue();
 				}
                 ptrace(PT_CONTINUE, m_pid, (caddr_t)1, 0);
             }
-            else if (info.exceptionData.size() >=1 && info.exceptionData[0] == 1)
+            else if (m_excInfo.exceptionData.size() >=1 && m_excInfo.exceptionData[0] == 1)
             {
                 //lldb中将这种情况当做breakpoint进行处理的
-                return handleBreakpoint(info);
+                return handleBreakpoint();
             }
             return false;
         case EXC_BREAKPOINT:
         {
-            return handleBreakpoint(info);
+            return handleBreakpoint();
         }
         case EXC_BAD_ACCESS:
         case EXC_BAD_INSTRUCTION:
@@ -641,7 +676,7 @@ bool DebugCore::handleException(ExceptionInfo const&info)
         case EXC_RESOURCE:
         case EXC_GUARD:
         case EXC_CORPSE_NOTIFY:
-			m_excAddr = getAllRegisterState(info.threadPort).rip;
+			m_excAddr = getAllRegisterState(m_excInfo.threadPort).rip;
             emit EventDispatcher::instance()->setDisasmAddress(m_excAddr);
             waitForContinue();
             //TODO:如果用户处理了异常应该返回true阻止程序自己处理异常
@@ -687,11 +722,11 @@ void DebugCore::waitForContinue()
     m_continueCV.wait(lock);
 }
 
-bool DebugCore::handleBreakpoint(ExceptionInfo const &info)
+bool DebugCore::handleBreakpoint()
 {
     x86_thread_state64_t state;
     mach_msg_type_number_t stateCount = x86_THREAD_STATE64_COUNT;
-    auto err = thread_get_state(info.threadPort, x86_THREAD_STATE64, (thread_state_t)&state, &stateCount);
+    auto err = thread_get_state(m_excInfo.threadPort, x86_THREAD_STATE64, (thread_state_t)&state, &stateCount);
     if (err != KERN_SUCCESS)
     {
         log(QString("In handleBreakpoint, thread_get_state failed: %1").arg(mach_error_string(err)), LogType::Error);
@@ -699,7 +734,7 @@ bool DebugCore::handleBreakpoint(ExceptionInfo const &info)
     }
     log(QString("rip: 0x%1").arg(state.__rip, 0, 16));
 
-    if (info.exceptionData[0] == 1)	//单步
+    if (m_excInfo.exceptionData[0] == 1)	//单步
     {
 		if (m_currentHitBP)
 		{
@@ -739,7 +774,7 @@ bool DebugCore::handleBreakpoint(ExceptionInfo const &info)
 		}
 	}
 
-	err = thread_set_state(info.threadPort, x86_THREAD_STATE64, (thread_state_t)&state, stateCount);
+	err = thread_set_state(m_excInfo.threadPort, x86_THREAD_STATE64, (thread_state_t)&state, stateCount);
 	if (err != KERN_SUCCESS)
 	{
 		log(QString("In handleBreakpoint, thread_set_state failed: %1").arg(mach_error_string(err)), LogType::Error);

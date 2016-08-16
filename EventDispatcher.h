@@ -26,5 +26,6 @@ signals:
 	void refreshDisasmView();
 	void breakpointChanged();
 	void setMemoryViewAddress(uint64_t address);
+	void setStackAddress(uint64_t address);
 };
 

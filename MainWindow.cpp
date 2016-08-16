@@ -54,10 +54,10 @@ MainWidget::MainWidget(QWidget *parent)
 	{
 		activeOrAddDockWidget(Flex::ToolView,"寄存器",Flex::B0,0,center);
 	}, QKeySequence(Qt::ALT + Qt::Key_R)));
-//	addAction("view.callstackView", menu->addAction("调用堆栈窗口", [this]
-//	{
-//		activeOrAddDockWidget(Flex::ToolView,"调用堆栈",Flex::B0,0,center);
-//	}, QKeySequence(Qt::ALT + Qt::Key_C)));
+	addAction("view.callstackView", menu->addAction("栈窗口", [this]
+	{
+		activeOrAddDockWidget(Flex::ToolView,"栈",Flex::B0,0,center);
+	}, QKeySequence(Qt::ALT + Qt::Key_S)));
 	addAction("view.memoryMapView", menu->addAction("内存映射窗口窗口", [this]{activeOrAddDockWidget(Flex::ToolView,"内存映射",Flex::B0,0,center);}));
 	addAction("view.watchView", menu->addAction("监视窗口", []{}));
 	addAction("view.breakpointView", menu->addAction(QIcon(":/icon/Resources/breakpoint_enabled.png"), "断点窗口", [this]
@@ -386,6 +386,22 @@ void MainWidget::onDockEidgetCreated(DockWidget *widget)
 		}
 		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDebugCore, view, &QHexView::setDebugCore);
 		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setMemoryViewAddress, view, &QHexView::scrollTo);
+		widget->attachWidget(view);
+	}
+	else if (title == "栈")
+	{
+		auto view = new QHexView(this);
+		view->setDebugCore(m_debugCore);
+		if (m_debugCore)
+		{
+			view->scrollTo(m_debugCore->stackAddr());
+		}
+		view->setShowAsciiDump(false);
+		view->setShowComments(false);
+		view->setRowWidth(1);
+		view->setWordWidth(8);
+		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDebugCore, view, &QHexView::setDebugCore);
+		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setStackAddress, view, &QHexView::scrollTo);
 		widget->attachWidget(view);
 	}
 	else
