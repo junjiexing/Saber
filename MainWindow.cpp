@@ -237,6 +237,8 @@ MainWidget::MainWidget(QWidget *parent)
                 <<(new QStandardItem(logTypeToString(type)))
                 <<(new QStandardItem(msg)));
     });
+
+	loadLayout();
 }
 
 MainWidget::~MainWidget()
