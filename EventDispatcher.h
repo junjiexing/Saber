@@ -21,11 +21,12 @@ public:
 signals:
 	void setDebugCore(std::shared_ptr<DebugCore> debugCore);
     void setDisasmAddress(uint64_t addr);
-	void showMemoryMap(std::vector<MemoryRegion> regions);
 	void showRegisters(Register regs);
 	void refreshDisasmView();
 	void breakpointChanged();
 	void setMemoryViewAddress(uint64_t address);
 	void setStackAddress(uint64_t address);
+	void updateUI();
+	void debugEvent();
 };
 

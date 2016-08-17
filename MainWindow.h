@@ -48,7 +48,6 @@ private:
 
     std::shared_ptr<DebugCore> m_debugCore = nullptr;
 
-    QStandardItemModel* m_memoryMapModel;
     RegisterModel* m_registerModel;
     QStandardItemModel* m_logModel;
     std::mutex m_logMtx;

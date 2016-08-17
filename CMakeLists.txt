@@ -47,7 +47,7 @@ set(SOURCE_FILES
         BreakpointView.cpp
         BreakpointView.h
         utils.h
-)
+        MemoryMapView.cpp MemoryMapView.h)
 
 include_directories(
         ${Qt5Widgets_INCLUDES}

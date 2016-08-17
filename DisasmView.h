@@ -22,6 +22,7 @@ public slots:
     void analysis();
     void setDebugCore(std::shared_ptr<DebugCore> debugCore);
 	void onRefresh();
+	void debugEvent();
     // QWidget interface
 protected:
     void paintEvent(QPaintEvent *e) override;

@@ -63,8 +63,9 @@ DebugCore::~DebugCore()
     stop();
 }
 
-void DebugCore::refreshMemoryMap()
+std::vector<MemoryRegion> DebugCore::getMemoryMap()
 {
+	std::vector<MemoryRegion> memoryRegions;
     mach_vm_address_t start = 0;
     do
     {
@@ -81,9 +82,9 @@ void DebugCore::refreshMemoryMap()
         }
 
         bool needAdd = true;
-        if (!m_memoryRegions.empty())
+        if (!memoryRegions.empty())
         {
-            auto& region = m_memoryRegions.back();
+            auto& region = memoryRegions.back();
             if (start == region.start + region.size)
             {
                 auto& prevInfo = region.info;
@@ -99,30 +100,18 @@ void DebugCore::refreshMemoryMap()
         }
         if (needAdd)
         {
-            m_memoryRegions.emplace_back(MemoryRegion{start, size, info});
+            memoryRegions.emplace_back(MemoryRegion{start, size, info});
         }
 
         start += size;
 
     } while (start != 0);
 
-    emit EventDispatcher::instance()->showMemoryMap(m_memoryRegions);
+	return memoryRegions;
 }
 
 bool DebugCore::findRegion(uint64_t address, uint64_t &start, uint64_t &size)
 {
-	//TODO: 将内存映射窗口改为手动刷新,这里删掉
-    refreshMemoryMap();
-//    for (auto region : m_memoryRegions)
-//    {
-//        if (region.start <= address && (region.start + region.size) >= address)
-//        {
-//            start = region.start;
-//            size = region.size;
-//            return true;
-//        }
-//    }
-
     mach_vm_address_t _start = address;
     mach_vm_size_t _size = 0;
     natural_t depth = 0;
@@ -364,39 +353,40 @@ void DebugCore::getEntryAndDataAddr()
 Register DebugCore::getAllRegisterState(task_t thread)
 {
     /* Get the thread state for the first thread */
-    x86_thread_state64_t state;
+    Register reg;
     mach_msg_type_number_t stateCount = x86_THREAD_STATE64_COUNT;
-    auto err = thread_get_state(thread, x86_THREAD_STATE64, (thread_state_t)&state, &stateCount);
+    auto err = thread_get_state(thread, x86_THREAD_STATE64, (thread_state_t)&reg.threadState, &stateCount);
     if (err != KERN_SUCCESS)
     {
-        log(QString("thread_get_state() error: \"%1\" 获取所有寄存器状态失败。").arg(mach_error_string(err)), LogType::Error);
+        log(QString("thread_get_state() error: \"%1\" 获取通用寄存器状态失败。").arg(mach_error_string(err)), LogType::Error);
         return {};
     }
 
-    Register regs;
-    regs.cs = state.__cs;
-    regs.fs = state.__fs;
-    regs.gs = state.__gs;
-    regs.r8 = state.__r8;
-    regs.r9 = state.__r9;
-    regs.r10 = state.__r10;
-    regs.r11 = state.__r11;
-    regs.r12 = state.__r12;
-    regs.r13 = state.__r13;
-    regs.r14 = state.__r14;
-    regs.r15 = state.__r15;
-    regs.rax = state.__rax;
-    regs.rbx = state.__rbx;
-    regs.rcx = state.__rcx;
-    regs.rdx = state.__rdx;
-    regs.rbp = state.__rbp;
-    regs.rdi = state.__rdi;
-    regs.rsi = state.__rsi;
-    regs.rsp = state.__rsp;
-    regs.rip = state.__rip;
-    regs.rflags = state.__rflags;
+//	stateCount = x86_FLOAT_STATE64_COUNT;
+//	err = thread_get_state(thread, x86_FLOAT_STATE64, (thread_state_t)&reg.floatState, &stateCount);
+//	if (err != KERN_SUCCESS)
+//	{
+//		log(QString("thread_get_state() error: \"%1\" 获取浮点寄存器状态失败。").arg(mach_error_string(err)), LogType::Error);
+//		return {};
+//	}
+//
+//	stateCount = x86_AVX_STATE64_COUNT;
+//	err = thread_get_state(thread, x86_AVX_STATE64, (thread_state_t)&reg.avxState, &stateCount);
+//	if (err != KERN_SUCCESS)
+//	{
+//		log(QString("thread_get_state() error: \"%1\" 获取AVX寄存器状态失败。").arg(mach_error_string(err)), LogType::Error);
+//		return {};
+//	}
+//
+//	stateCount = x86_DEBUG_STATE64_COUNT;
+//	err = thread_get_state(thread, x86_DEBUG_STATE64, (thread_state_t)&reg.debugState, &stateCount);
+//	if (err != KERN_SUCCESS)
+//	{
+//		log(QString("thread_get_state() error: \"%1\" 获取调试寄存器状态失败。").arg(mach_error_string(err)), LogType::Error);
+//		return {};
+//	}
 
-    return regs;
+	return reg;
 }
 
 void DebugCore::getAllSegment()
@@ -602,7 +592,6 @@ void DebugCore::debugLoop()
 //            outputMessage("调试目标已退出。", MessageType::Info);
 //            break;
 //        }
-//        refreshMemoryMap();
 //        refreshRegister(getAllRegisterState(m_currPid));
 //        outputMessage(QString("Status: %1").arg(status), MessageType::Info);
 //
@@ -632,7 +621,7 @@ bool DebugCore::handleException(ExceptionInfo const&info)
 
 	auto regInfo = getAllRegisterState(m_excInfo.threadPort);
     emit EventDispatcher::instance()->showRegisters(regInfo);
-	m_stackAddr = regInfo.rsp;
+	m_stackAddr = regInfo.threadState.__rsp;
 	emit EventDispatcher::instance()->setStackAddress(m_stackAddr);
     switch (m_excInfo.exceptionType)
     {
@@ -650,7 +639,6 @@ bool DebugCore::handleException(ExceptionInfo const&info)
                 }
 				else
 				{
-					emit EventDispatcher::instance()->setDisasmAddress(m_excInfo.exceptionAddr);
 					waitForContinue();
 				}
                 ptrace(PT_CONTINUE, m_pid, (caddr_t)1, 0);
@@ -676,8 +664,7 @@ bool DebugCore::handleException(ExceptionInfo const&info)
         case EXC_RESOURCE:
         case EXC_GUARD:
         case EXC_CORPSE_NOTIFY:
-			m_excAddr = getAllRegisterState(m_excInfo.threadPort).rip;
-            emit EventDispatcher::instance()->setDisasmAddress(m_excAddr);
+			m_excAddr = regInfo.threadState.__rip;
             waitForContinue();
             //TODO:如果用户处理了异常应该返回true阻止程序自己处理异常
             return false;
@@ -718,6 +705,7 @@ void DebugCore::continueDebug()
 
 void DebugCore::waitForContinue()
 {
+	emit EventDispatcher::instance()->debugEvent();
     std::unique_lock<std::mutex> lock(m_continueMtx);
     m_continueCV.wait(lock);
 }
@@ -749,7 +737,6 @@ bool DebugCore::handleBreakpoint()
 		}
 
 		m_excAddr = state.__rip;
-        emit EventDispatcher::instance()->setDisasmAddress(m_excAddr);
         waitForContinue();
 
         return doContinueDebug();
@@ -781,7 +768,6 @@ bool DebugCore::handleBreakpoint()
 		return false;
 	}
 
-	emit EventDispatcher::instance()->setDisasmAddress(m_excAddr);
     waitForContinue();
 
 	if (m_currentHitBP)

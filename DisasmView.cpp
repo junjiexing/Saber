@@ -224,3 +224,13 @@ void DisasmView::onRefresh()
 {
 	viewport()->update();
 }
+void DisasmView::debugEvent()
+{
+	auto debugCore = m_debugCore.lock();
+	if (!debugCore)
+	{
+		return;
+	}
+
+	gotoAddress(debugCore->excAddr());
+}

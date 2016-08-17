@@ -10,29 +10,7 @@ public:
     RegisterModel(QWidget* parent);
 
 public slots:
-    void setRax(uint64_t val);
-    void setRbx(uint64_t val);
-    void setRcx(uint64_t val);
-    void setRdx(uint64_t val);
-    void setRdi(uint64_t val);
-    void setRsi(uint64_t val);
-    void setRbp(uint64_t val);
-    void setRsp(uint64_t val);
-    void setR8(uint64_t val);
-    void setR9(uint64_t val);
-    void setR10(uint64_t val);
-    void setR11(uint64_t val);
-    void setR12(uint64_t val);
-    void setR13(uint64_t val);
-    void setR14(uint64_t val);
-    void setR15(uint64_t val);
-    void setRip(uint64_t val);
-    void setRflags(uint64_t val);
-    void setCs(uint64_t val);
-    void setFs(uint64_t val);
-    void setGs(uint64_t val);
-
-    void setRegister(const Register regs);
+    void setRegister(const Register reg);
 private:
     QStandardItem* m_rax;
     QStandardItem* m_rbx;

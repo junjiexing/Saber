@@ -95,135 +95,35 @@ RegisterModel::RegisterModel(QWidget *parent)
 
 }
 
-void RegisterModel::setRax(uint64_t val)
+void RegisterModel::setRegister(const Register reg)
 {
-    m_rax->setText(QString::number(val, 16));
-}
+    m_rax->setText(QString::number(reg.threadState.__rax, 16));
+    m_rbx->setText(QString::number(reg.threadState.__rbx, 16));
+    m_rcx->setText(QString::number(reg.threadState.__rcx, 16));
+    m_rdx->setText(QString::number(reg.threadState.__rdx, 16));
+    m_rdi->setText(QString::number(reg.threadState.__rdi, 16));
+    m_rsi->setText(QString::number(reg.threadState.__rsi, 16));
+    m_rbp->setText(QString::number(reg.threadState.__rbp, 16));
+    m_rsp->setText(QString::number(reg.threadState.__rsp, 16));
+    m_r8->setText(QString::number(reg.threadState.__r8, 16));
+    m_r9->setText(QString::number(reg.threadState.__r9, 16));
+    m_r10->setText(QString::number(reg.threadState.__r10, 16));
+    m_r11->setText(QString::number(reg.threadState.__r11, 16));
+    m_r12->setText(QString::number(reg.threadState.__r12, 16));
+    m_r13->setText(QString::number(reg.threadState.__r13, 16));
+    m_r14->setText(QString::number(reg.threadState.__r14, 16));
+    m_r15->setText(QString::number(reg.threadState.__r15, 16));
 
-void RegisterModel::setRbx(uint64_t val)
-{
-    m_rbx->setText(QString::number(val, 16));
-}
+    m_rip->setText(QString::number(reg.threadState.__rip, 16));
 
-void RegisterModel::setRcx(uint64_t val)
-{
-    m_rcx->setText(QString::number(val, 16));
-}
+    m_rflags->setText(QString::number(reg.threadState.__rflags, 16));
 
-void RegisterModel::setRdx(uint64_t val)
-{
-    m_rdx->setText(QString::number(val, 16));
-}
+    m_cs->setText(QString::number(reg.threadState.__cs, 16));
+    m_fs->setText(QString::number(reg.threadState.__fs, 16));
+    m_gs->setText(QString::number(reg.threadState.__gs, 16));
 
-void RegisterModel::setRdi(uint64_t val)
-{
-    m_rdi->setText(QString::number(val, 16));
-}
 
-void RegisterModel::setRsi(uint64_t val)
-{
-    m_rsi->setText(QString::number(val, 16));
-}
 
-void RegisterModel::setRbp(uint64_t val)
-{
-    m_rbp->setText(QString::number(val, 16));
-}
 
-void RegisterModel::setRsp(uint64_t val)
-{
-    m_rsp->setText(QString::number(val, 16));
-}
 
-void RegisterModel::setR8(uint64_t val)
-{
-    m_r8->setText(QString::number(val, 16));
-}
-
-void RegisterModel::setR9(uint64_t val)
-{
-    m_r9->setText(QString::number(val, 16));
-}
-
-void RegisterModel::setR10(uint64_t val)
-{
-    m_r10->setText(QString::number(val, 16));
-}
-
-void RegisterModel::setR11(uint64_t val)
-{
-    m_r11->setText(QString::number(val, 16));
-}
-
-void RegisterModel::setR12(uint64_t val)
-{
-    m_r12->setText(QString::number(val, 16));
-}
-
-void RegisterModel::setR13(uint64_t val)
-{
-    m_r13->setText(QString::number(val, 16));
-}
-
-void RegisterModel::setR14(uint64_t val)
-{
-    m_r14->setText(QString::number(val, 16));
-}
-
-void RegisterModel::setR15(uint64_t val)
-{
-    m_r15->setText(QString::number(val, 16));
-}
-
-void RegisterModel::setRip(uint64_t val)
-{
-    m_rip->setText(QString::number(val, 16));
-}
-
-void RegisterModel::setRflags(uint64_t val)
-{
-    m_rflags->setText(QString::number(val, 16));
-}
-
-void RegisterModel::setCs(uint64_t val)
-{
-    m_cs->setText(QString::number(val, 16));
-}
-
-void RegisterModel::setFs(uint64_t val)
-{
-    m_fs->setText(QString::number(val, 16));
-}
-
-void RegisterModel::setGs(uint64_t val)
-{
-    m_gs->setText(QString::number(val, 16));
-}
-
-void RegisterModel::setRegister(const Register regs)
-{
-    m_rax->setText(QString::number(regs.rax, 16));
-    m_rbx->setText(QString::number(regs.rbx, 16));
-    m_rcx->setText(QString::number(regs.rcx, 16));
-    m_rdx->setText(QString::number(regs.rdx, 16));
-    m_rdi->setText(QString::number(regs.rdi, 16));
-    m_rsi->setText(QString::number(regs.rsi, 16));
-    m_rbp->setText(QString::number(regs.rbp, 16));
-    m_rsp->setText(QString::number(regs.rsp, 16));
-    m_r8->setText(QString::number(regs.r8, 16));
-    m_r9->setText(QString::number(regs.r9, 16));
-    m_r10->setText(QString::number(regs.r10, 16));
-    m_r11->setText(QString::number(regs.r11, 16));
-    m_r12->setText(QString::number(regs.r12, 16));
-    m_r13->setText(QString::number(regs.r13, 16));
-    m_r14->setText(QString::number(regs.r14, 16));
-    m_r15->setText(QString::number(regs.r15, 16));
-
-    m_rip->setText(QString::number(regs.rip, 16));
-
-    m_rflags->setText(QString::number(regs.rflags, 16));
-
-    m_cs->setText(QString::number(regs.cs, 16));
-    m_fs->setText(QString::number(regs.fs, 16));
-    m_gs->setText(QString::number(regs.gs, 16));
 }

@@ -6,6 +6,7 @@
 #include "AttachProcessList.h"
 #include "BreakpointView.h"
 #include "qhexview.h"
+#include "MemoryMapView.h"
 
 #include <QtDockWidget.h>
 #include <QtFlexWidget.h>
@@ -222,9 +223,6 @@ MainWidget::MainWidget(QWidget *parent)
 
 
 	//初始化model
-	m_memoryMapModel = new QStandardItemModel(0, 3, this);
-	m_memoryMapModel->setHorizontalHeaderLabels(QStringList()<<"起始地址"<<"大小"<<"权限");
-
 	m_registerModel = new RegisterModel(this);
 
 	m_logModel = new QStandardItemModel(this);
@@ -332,10 +330,7 @@ void MainWidget::onDockEidgetCreated(DockWidget *widget)
     auto const& title = widget->windowTitle();
 	if (title == "内存映射")
 	{
-		auto table = new QTableView(widget);
-		table->setModel(m_memoryMapModel);
-		table->setSelectionBehavior(QAbstractItemView::SelectRows);
-		table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+		auto table = new MemoryMapView(widget);
 		widget->attachWidget(table);
 	}
 	else if (title == "输出")
@@ -363,6 +358,7 @@ void MainWidget::onDockEidgetCreated(DockWidget *widget)
 		}
 		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDebugCore, view, &DisasmView::setDebugCore);
 		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDisasmAddress, view, &DisasmView::gotoAddress);
+		QObject::connect(EventDispatcher::instance(), &EventDispatcher::debugEvent, view, &DisasmView::debugEvent);
 		QObject::connect(EventDispatcher::instance(), &EventDispatcher::refreshDisasmView, view, &DisasmView::onRefresh);
 		QObject::connect(EventDispatcher::instance(), &EventDispatcher::breakpointChanged, view, &DisasmView::onRefresh);
         widget->attachWidget(view);
@@ -452,16 +448,6 @@ void MainWidget::onFileOpen()
 
 	m_debugCore = std::make_shared<DebugCore>();
     emit EventDispatcher::instance()->setDebugCore(m_debugCore);
-	connect(EventDispatcher::instance(), &EventDispatcher::showMemoryMap, [this](std::vector<MemoryRegion> regions)
-	{
-		m_memoryMapModel->setRowCount(regions.size());
-		for (unsigned i = 0; i < regions.size(); ++i)
-		{
-			m_memoryMapModel->setItem(i, 0, new QStandardItem(QString("%1").arg(regions[i].start, 0, 16)));
-			m_memoryMapModel->setItem(i, 1, new QStandardItem(QString("%1").arg(regions[i].size, 0, 16)));
-			m_memoryMapModel->setItem(i, 2, new QStandardItem(QString("%1").arg(regions[i].info.protection, 0, 16)));
-		}
-	});
 	connect(EventDispatcher::instance(), &EventDispatcher::showRegisters, m_registerModel, &RegisterModel::setRegister);
 
 	m_debugCore->debugNew(path, args);
