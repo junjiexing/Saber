@@ -331,6 +331,7 @@ void MainWidget::onDockEidgetCreated(DockWidget *widget)
 	if (title == "内存映射")
 	{
 		auto table = new MemoryMapView(widget);
+		table->setDebugCore(m_debugCore);
 		widget->attachWidget(table);
 	}
 	else if (title == "输出")

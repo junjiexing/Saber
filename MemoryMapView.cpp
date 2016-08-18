@@ -5,7 +5,6 @@
 #include "MemoryMapView.h"
 #include "DebugCore.h"
 #include "EventDispatcher.h"
-#include "Log.h"
 
 MemoryMapView::MemoryMapView(QWidget *parent)
 	: QTableWidget(0, 3, parent)
@@ -13,11 +12,11 @@ MemoryMapView::MemoryMapView(QWidget *parent)
 	setHorizontalHeaderLabels(QStringList()<<"起始地址"<<"大小"<<"权限");
 	setSelectionBehavior(QAbstractItemView::SelectRows);
 	setEditTriggers(QAbstractItemView::NoEditTriggers);
-	connect(EventDispatcher::instance(), &EventDispatcher::debugEvent, this, &MemoryMapView::onDebugEvent);
+	connect(EventDispatcher::instance(), &EventDispatcher::debugEvent, this, &MemoryMapView::updateContent);
 	connect(EventDispatcher::instance(), &EventDispatcher::setDebugCore, this, &MemoryMapView::setDebugCore);
 }
 
-void MemoryMapView::onDebugEvent()
+void MemoryMapView::updateContent()
 {
 	auto debugCore = m_debugCore.lock();
 	if (!debugCore)

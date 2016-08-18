@@ -16,7 +16,7 @@ public:
 
 public slots:
 	void setDebugCore(std::shared_ptr<DebugCore> debugCore);
-	void onDebugEvent();
+	void updateContent();
 
 private:
 	std::weak_ptr<DebugCore> m_debugCore;
