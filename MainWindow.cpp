@@ -15,13 +15,13 @@
 #include "DebugCore.h"
 
 
-MainWidget::MainWidget(QWidget *parent)
+MainWindow::MainWindow(QWidget *parent)
 		: QMainWindow(parent)
 {
 	setObjectName("MainWindow");
 	qApp->setProperty("window", QVariant::fromValue<QObject*>(this));
 
-	connect(FlexManager::instance(), &FlexManager::dockWidgetCreated, this, &MainWidget::onDockEidgetCreated);
+	connect(FlexManager::instance(), &FlexManager::dockWidgetCreated, this, &MainWindow::onDockEidgetCreated);
 
 	center = FlexManager::instance()->createFlexWidget(Flex::HybridView, this, Flex::widgetFlags(), "RootFlex");
 	setCentralWidget(center);
@@ -170,8 +170,8 @@ MainWidget::MainWidget(QWidget *parent)
 	menuBar()->addMenu(menu);
 
 	menu = new QMenu("窗口",this);
-	addAction("window.saveLayout", menu->addAction("保存布局", this, &MainWidget::saveLayout));
-	addAction("window.loadLayout", menu->addAction("加载布局", this, &MainWidget::loadLayout));
+	addAction("window.saveLayout", menu->addAction("保存布局", this, &MainWindow::saveLayout));
+	addAction("window.loadLayout", menu->addAction("加载布局", this, &MainWindow::loadLayout));
 	menuBar()->addMenu(menu);
 
 	menu = new QMenu("帮助",this);
@@ -228,22 +228,22 @@ MainWidget::MainWidget(QWidget *parent)
 	loadLayout();
 }
 
-MainWidget::~MainWidget()
+MainWindow::~MainWindow()
 {
 }
 
-void MainWidget::addAction(const std::string& key, QAction* action)
+void MainWindow::addAction(const std::string& key, QAction* action)
 {
 	m_actions.emplace(key, action);
 }
 
-QAction *MainWidget::getAction(const std::string& key)
+QAction *MainWindow::getAction(const std::string& key)
 {
 	auto it = m_actions.find(key);
 	return (it == m_actions.end()? nullptr: it->second);
 }
 
-bool MainWidget::removeAction(const std::string& key)
+bool MainWindow::removeAction(const std::string& key)
 {
 	auto it = m_actions.find(key);
 	if (it == m_actions.end())
@@ -255,13 +255,13 @@ bool MainWidget::removeAction(const std::string& key)
 	return true;
 }
 
-DockWidget *MainWidget::findDockWidget(const QString& name)
+DockWidget *MainWindow::findDockWidget(const QString& name)
 {
 	return FlexManager::instance()->dockWidget(name);
 }
 
 
-DockWidget *MainWidget::addDockWidget(Flex::ViewMode mode,
+DockWidget *MainWindow::addDockWidget(Flex::ViewMode mode,
 									  const QString& name, Flex::DockArea area, int siteIndex,
 									  FlexWidget* parent)
 {
@@ -276,7 +276,7 @@ DockWidget *MainWidget::addDockWidget(Flex::ViewMode mode,
 	return dockWidget;
 }
 
-DockWidget *MainWidget::activeOrAddDockWidget(
+DockWidget *MainWindow::activeOrAddDockWidget(
 		Flex::ViewMode mode, const QString& name,
 		Flex::DockArea area, int siteIndex, FlexWidget* parent)
 {
@@ -290,7 +290,7 @@ DockWidget *MainWidget::activeOrAddDockWidget(
 	return addDockWidget(mode, name, area, siteIndex, parent);
 }
 
-void MainWidget::saveLayout()
+void MainWindow::saveLayout()
 {
 	QSettings settings("MacBook","Saber");
 
@@ -298,7 +298,7 @@ void MainWidget::saveLayout()
 	settings.setValue("Default",bytes);
 }
 
-void MainWidget::loadLayout()
+void MainWindow::loadLayout()
 {
 	QSettings settings("MacBook","Saber");
 	QByteArray content = settings.value("Default").toByteArray();
@@ -313,7 +313,7 @@ void MainWidget::loadLayout()
 	FlexManager::instance()->load(content,parents);
 }
 
-void MainWidget::onDockEidgetCreated(DockWidget *widget)
+void MainWindow::onDockEidgetCreated(DockWidget *widget)
 {
     auto const& title = widget->windowTitle();
 	if (title == "内存映射")
@@ -387,7 +387,7 @@ void MainWidget::onDockEidgetCreated(DockWidget *widget)
 	}
 }
 
-void MainWidget::onFileOpen()
+void MainWindow::onFileOpen()
 {
 	//TODO:
 	QString path,args;

@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
     EventDispatcher::registerMetaType();
     QApplication::setStyle(new FlexStyle());
 
-    MainWidget w;
+    MainWindow w;
     w.showMaximized();
 
     return a.exec();

@@ -5,19 +5,6 @@
 #include "OutputView.h"
 #include "EventDispatcher.h"
 
-QString logTypeToString(LogType type)
-{
-	switch (type)
-	{
-	case LogType::Info:
-		return "Info";
-	case LogType::Warning:
-		return "Warning";
-	case LogType::Error:
-		return "Error";
-	}
-}
-
 OutputModel::OutputModel(QObject *parent)
 	: QStandardItemModel(parent)
 {
@@ -27,9 +14,30 @@ OutputModel::OutputModel(QObject *parent)
 
 void OutputModel::addLog(QString msg, LogType t)
 {
-	appendRow(QList<QStandardItem*>()
-				  <<(new QStandardItem(logTypeToString(t)))
-				  <<(new QStandardItem(msg)));
+	QString level;
+	QColor color;
+	switch (t)
+	{
+	case LogType::Info:
+		level = "Info";
+		color = Qt::white;
+		break;
+	case LogType::Warning:
+		level = "Warning";
+		color = Qt::yellow;
+		break;
+	case LogType::Error:
+		level = "Error";
+		color = Qt::red;
+		break;
+	}
+
+	auto item1 = new QStandardItem(level);
+	item1->setBackground(color);
+	auto item2 = new QStandardItem(msg);
+	item2->setBackground(color);
+
+	appendRow(QList<QStandardItem*>() << item1 << item2);
 }
 
 OutputView::OutputView(QWidget *parent)
@@ -37,4 +45,10 @@ OutputView::OutputView(QWidget *parent)
 {
 	setSelectionBehavior(QAbstractItemView::SelectRows);
 	setEditTriggers(QAbstractItemView::NoEditTriggers);
+}
+
+void OutputView::rowsInserted(const QModelIndex &parent, int start, int end)
+{
+	scrollToBottom();
+	QAbstractItemView::rowsInserted(parent, start, end);
 }

@@ -21,6 +21,9 @@ public slots:
 class OutputView : public QTableView
 {
 	Q_OBJECT
+protected:
+	virtual void rowsInserted(const QModelIndex &parent, int start, int end) override;
+private:
 public:
 	OutputView(QWidget* parent);
 

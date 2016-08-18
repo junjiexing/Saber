@@ -16,6 +16,7 @@ void EventDispatcher::registerMetaType()
 	qRegisterMetaType<uint64_t>("uint64_t");
 	qRegisterMetaType<Register>("Register");
 	qRegisterMetaType<QVector<int>>("QVector<int>");
+	qRegisterMetaType<LogType>("LogType");
 }
 
 

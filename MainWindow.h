@@ -19,13 +19,13 @@
 class DebugCore;
 
 
-class MainWidget : public QMainWindow
+class MainWindow : public QMainWindow
 {
 Q_OBJECT
 
 public:
-    MainWidget(QWidget *parent = 0);
-    ~MainWidget();
+    MainWindow(QWidget *parent = 0);
+    ~MainWindow();
 
     void addAction(const std::string& key, QAction* action);
     QAction* getAction(const std::string& key);
