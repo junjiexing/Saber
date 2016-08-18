@@ -13,6 +13,7 @@
 
 #include "Common.h"
 #include "RegisterModel.h"
+#include "OutputView.h"
 
 
 class DebugCore;
@@ -49,7 +50,6 @@ private:
     std::shared_ptr<DebugCore> m_debugCore = nullptr;
 
     RegisterModel* m_registerModel;
-    QStandardItemModel* m_logModel;
-    std::mutex m_logMtx;
+    OutputModel* m_outputModel;
 };
 

@@ -1,7 +1,8 @@
 #include "DisasmView.h"
 #include "libasmx64.h"
 #include "DebugCore.h"
-#include "Log.h"
+#include "global.h"
+#include "EventDispatcher.h"
 #include "global.h"
 
 #include <QtWidgets>
@@ -10,6 +11,13 @@ DisasmView::DisasmView(QWidget *parent)
     : QAbstractScrollArea(parent),
       m_regionStart(0),m_regionSize(0)
 {
+	QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDebugCore, this, &DisasmView::setDebugCore);
+	QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDisasmAddress, this, &DisasmView::gotoAddress);
+	QObject::connect(EventDispatcher::instance(), &EventDispatcher::debugEvent, this, &DisasmView::updateContent);
+	QObject::connect(EventDispatcher::instance(), &EventDispatcher::refreshDisasmView,
+					 viewport(), static_cast<void(QWidget::*)()>(&QWidget::update));
+	QObject::connect(EventDispatcher::instance(), &EventDispatcher::breakpointChanged,
+					 viewport(), static_cast<void(QWidget::*)()>(&QWidget::update));
 }
 
 void DisasmView::gotoAddress(uint64_t address)
@@ -220,11 +228,8 @@ void DisasmView::wheelEvent(QWheelEvent *event)
     m_foundIndex = true;
     QAbstractScrollArea::wheelEvent(event);
 }
-void DisasmView::onRefresh()
-{
-	viewport()->update();
-}
-void DisasmView::debugEvent()
+
+void DisasmView::updateContent()
 {
 	auto debugCore = m_debugCore.lock();
 	if (!debugCore)

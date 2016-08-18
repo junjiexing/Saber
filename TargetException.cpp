@@ -4,7 +4,7 @@
 
 #include "TargetException.h"
 #include "mach_exc.h"
-#include "Log.h"
+#include "global.h"
 
 extern "C" boolean_t mach_exc_server(mach_msg_header_t *InHeadP, mach_msg_header_t *OutHeadP);
 

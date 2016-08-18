@@ -1,6 +1,6 @@
 #include "Breakpoint.h"
 #include "DebugCore.h"
-#include "Log.h"
+#include "global.h"
 #include "EventDispatcher.h"
 #include "utils.h"
 

@@ -16,7 +16,7 @@ The license chosen is at the discretion of the user of this software.
 #include "qhexview.h"
 
 #include "DebugCore.h"
-#include "Log.h"
+#include "global.h"
 
 #include <QApplication>
 #include <QBuffer>

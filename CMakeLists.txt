@@ -37,8 +37,6 @@ set(SOURCE_FILES
         mach_excUser.c
         TargetException.cpp
         TargetException.h
-        Log.cpp
-        Log.h
         EventDispatcher.cpp
         EventDispatcher.h
         global.cpp
@@ -47,7 +45,7 @@ set(SOURCE_FILES
         BreakpointView.cpp
         BreakpointView.h
         utils.h
-        MemoryMapView.cpp MemoryMapView.h)
+        MemoryMapView.cpp MemoryMapView.h OutputView.cpp OutputView.h)
 
 include_directories(
         ${Qt5Widgets_INCLUDES}

@@ -28,5 +28,6 @@ signals:
 	void setStackAddress(uint64_t address);
 	void updateUI();
 	void debugEvent();
+	void addLog(QString msg, LogType t);
 };
 

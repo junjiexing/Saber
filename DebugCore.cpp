@@ -1,7 +1,7 @@
 #include "DebugCore.h"
 #include "TargetException.h"
 #include "EventDispatcher.h"
-#include "Log.h"
+#include "global.h"
 #include "utils.h"
 
 #include <vector>

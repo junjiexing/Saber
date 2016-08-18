@@ -1,5 +1,5 @@
 #include "MainWindow.h"
-#include "Log.h"
+#include "global.h"
 #include "DisasmView.h"
 #include "EventDispatcher.h"
 #include "global.h"
@@ -224,24 +224,12 @@ MainWidget::MainWidget(QWidget *parent)
 
 	//初始化model
 	m_registerModel = new RegisterModel(this);
-
-	m_logModel = new QStandardItemModel(this);
-    m_logModel->setHorizontalHeaderLabels(QStringList() << "级别" << "信息");
-    setLogFunc([this](QString const& msg, LogType type)
-    {
-        std::lock_guard<std::mutex> _(m_logMtx);
-        m_logModel->appendRow(
-                QList<QStandardItem*>()
-                <<(new QStandardItem(logTypeToString(type)))
-                <<(new QStandardItem(msg)));
-    });
-
+	m_outputModel = new OutputModel(this);
 	loadLayout();
 }
 
 MainWidget::~MainWidget()
 {
-    setLogFunc(nullptr);
 }
 
 void MainWidget::addAction(const std::string& key, QAction* action)
@@ -330,18 +318,16 @@ void MainWidget::onDockEidgetCreated(DockWidget *widget)
     auto const& title = widget->windowTitle();
 	if (title == "内存映射")
 	{
-		auto table = new MemoryMapView(widget);
-		table->setDebugCore(m_debugCore);
-		widget->attachWidget(table);
+		auto view = new MemoryMapView(widget);
+		view->setDebugCore(m_debugCore);
+		view->updateContent();
+		widget->attachWidget(view);
 	}
 	else if (title == "输出")
 	{
-        auto log_view = new QTableView(this);
-        log_view->setSelectionBehavior(QAbstractItemView::SelectRows);
-        log_view->setEditTriggers(QAbstractItemView::NoEditTriggers);
-        log_view->horizontalHeader()->setStretchLastSection(true);
-        log_view->setModel(m_logModel);
-        widget->attachWidget(log_view);
+        auto view = new OutputView(widget);
+		view->setModel(m_outputModel);
+		widget->attachWidget(view);
 	}
 	else if (title == "寄存器")
 	{
@@ -353,15 +339,7 @@ void MainWidget::onDockEidgetCreated(DockWidget *widget)
     {
         auto view = new DisasmView(widget);
 		view->setDebugCore(m_debugCore);
-		if (m_debugCore)
-		{
-			view->gotoAddress(m_debugCore->excAddr());
-		}
-		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDebugCore, view, &DisasmView::setDebugCore);
-		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDisasmAddress, view, &DisasmView::gotoAddress);
-		QObject::connect(EventDispatcher::instance(), &EventDispatcher::debugEvent, view, &DisasmView::debugEvent);
-		QObject::connect(EventDispatcher::instance(), &EventDispatcher::refreshDisasmView, view, &DisasmView::onRefresh);
-		QObject::connect(EventDispatcher::instance(), &EventDispatcher::breakpointChanged, view, &DisasmView::onRefresh);
+		view->updateContent();
         widget->attachWidget(view);
     }
 	else if (title == "断点")

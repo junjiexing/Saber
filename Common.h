@@ -5,6 +5,12 @@
 #include <mach/mach.h>
 #include <vector>
 
+enum class LogType
+{
+	Info,
+	Warning,
+	Error
+};
 
 struct MemoryRegion
 {
