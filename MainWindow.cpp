@@ -346,12 +346,8 @@ void MainWindow::onDockWidgetCreated(DockWidget *widget)
 	else if (title == "断点")
 	{
 		auto view = new BreakpointView(widget);
-		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDebugCore, view, &BreakpointView::setDebugCore);
-		QObject::connect(EventDispatcher::instance(),
-						 &EventDispatcher::breakpointChanged,
-						 view,
-						 &BreakpointView::refreshBpList);
 		view->setDebugCore(m_debugCore);
+		view->updateContent();
 		widget->attachWidget(view);
 	}
 	else if (title == "内存")

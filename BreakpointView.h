@@ -17,7 +17,7 @@ public:
 
 	void setDebugCore(std::shared_ptr<DebugCore> debugCore);
 public slots:
-	void refreshBpList();
+	void updateContent();
 
 protected:
 	void contextMenuEvent(QContextMenuEvent *event);

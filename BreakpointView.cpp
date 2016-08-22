@@ -51,7 +51,7 @@ BreakpointView::BreakpointView(QWidget *parent)
 	setEditTriggers(QAbstractItemView::NoEditTriggers);
 
 	m_menu = new QMenu(this);
-	m_menu->addAction("刷新", [this] { refreshBpList(); });
+	m_menu->addAction("刷新", [this] { updateContent(); });
 	m_menu->addAction("启用/禁用断点", [this]
 	{
 		auto debugCore = m_debugCore.lock();
@@ -135,9 +135,12 @@ BreakpointView::BreakpointView(QWidget *parent)
 		}
 	});
 	//TODO: 添加断点编辑功能
+
+	QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDebugCore, this, &BreakpointView::setDebugCore);
+	QObject::connect(EventDispatcher::instance(), &EventDispatcher::breakpointChanged, this, &BreakpointView::updateContent);
 }
 
-void BreakpointView::refreshBpList()
+void BreakpointView::updateContent()
 {
 	auto debugCore = m_debugCore.lock();
 	if (!debugCore)
@@ -160,7 +163,7 @@ void BreakpointView::refreshBpList()
 void BreakpointView::setDebugCore(std::shared_ptr<DebugCore> debugCore)
 {
 	m_debugCore = debugCore;
-	refreshBpList();
+	updateContent();
 }
 void BreakpointView::contextMenuEvent(QContextMenuEvent *event)
 {
