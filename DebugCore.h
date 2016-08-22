@@ -41,7 +41,8 @@ public:
     void stepIn();
     mach_vm_address_t findBaseAddress();
     void getEntryAndDataAddr();
-    Register getAllRegisterState(task_t thread);
+    Register getAllRegisterState(mach_port_t thread);
+	bool setRegisterState(mach_port_t thread, RegisterType type, uint64_t value);
 
     using BreakpointPtr = std::shared_ptr<Breakpoint>;
 	using BreakpointWeakPtr = std::weak_ptr<Breakpoint>;

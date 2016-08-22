@@ -27,6 +27,34 @@ struct Register
 //	x86_debug_state64_t debugState;
 };
 
+enum class RegisterType
+{
+	RAX,
+	RBX,
+	RCX,
+	RDX,
+	RDI,
+	RSI,
+	RBP,
+	RSP,
+	R8,
+	R9,
+	R10,
+	R11,
+	R12,
+	R13,
+	R14,
+	R15,
+
+	RIP,
+
+	RFLAGS,
+
+	CS,
+	FS,
+	GS,
+};
+
 struct Segment
 {
     QString segname;    	/* segment name */

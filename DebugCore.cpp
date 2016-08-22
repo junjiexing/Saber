@@ -350,7 +350,7 @@ void DebugCore::getEntryAndDataAddr()
     }
 }
 
-Register DebugCore::getAllRegisterState(task_t thread)
+Register DebugCore::getAllRegisterState(mach_port_t thread)
 {
     /* Get the thread state for the first thread */
     Register reg;
@@ -797,6 +797,93 @@ bool DebugCore::doContinueDebug()
     }
 
     return ptrace(PT_CONTINUE, m_pid, (caddr_t)1, 0) == -1;
+}
+bool DebugCore::setRegisterState(mach_port_t thread, RegisterType type, uint64_t value)
+{
+	x86_thread_state64_t state;
+	mach_msg_type_number_t stateCount = x86_THREAD_STATE64_COUNT;
+	auto err = thread_get_state(thread, x86_THREAD_STATE64, (thread_state_t)&state, &stateCount);
+	if (err != KERN_SUCCESS)
+	{
+		log(QString("In DebugCore::setRegisterState, thread_get_state failed: %1").arg(mach_error_string(err)), LogType::Error);
+		return false;
+	}
+
+	switch (type)
+	{
+	case RegisterType::RAX :
+		state.__rax = value;
+		break;
+	case RegisterType::RBX :
+		state.__rbx = value;
+		break;
+	case RegisterType::RCX :
+		state.__rcx = value;
+		break;
+	case RegisterType::RDX :
+		state.__rdx = value;
+		break;
+	case RegisterType::RDI :
+		state.__rdi = value;
+		break;
+	case RegisterType::RSI :
+		state.__rsi = value;
+		break;
+	case RegisterType::RBP :
+		state.__rbp = value;
+		break;
+	case RegisterType::RSP :
+		state.__rsp = value;
+		break;
+	case RegisterType::R8 :
+		state.__r8 = value;
+		break;
+	case RegisterType::R9 :
+		state.__r9 = value;
+		break;
+	case RegisterType::R10 :
+		state.__r10 = value;
+		break;
+	case RegisterType::R11 :
+		state.__r11 = value;
+		break;
+	case RegisterType::R12 :
+		state.__r12 = value;
+		break;
+	case RegisterType::R13 :
+		state.__r13 = value;
+		break;
+	case RegisterType::R14 :
+		state.__r14 = value;
+		break;
+	case RegisterType::R15 :
+		state.__r15 = value;
+		break;
+	case RegisterType::RIP :
+		state.__rip = value;
+		break;
+	case RegisterType::RFLAGS :
+		state.__rflags = value;
+		break;
+	case RegisterType::CS :
+		state.__cs = value;
+		break;
+	case RegisterType::FS :
+		state.__fs = value;
+		break;
+	case RegisterType::GS :
+		state.__gs = value;
+		break;
+	}
+
+	err = thread_set_state(thread, x86_THREAD_STATE64, (thread_state_t)&state, stateCount);
+	if (err != KERN_SUCCESS)
+	{
+		log(QString("In DebugCore::setRegisterState, thread_set_state failed: %1").arg(mach_error_string(err)), LogType::Error);
+		return false;
+	}
+
+	return true;
 }
 
 

@@ -11,6 +11,9 @@ class DebugCore;
 class RegisterView : public QTreeWidget
 {
 	Q_OBJECT
+protected:
+	virtual void mouseDoubleClickEvent(QMouseEvent *event) override;
+private:
 public:
 	RegisterView(QWidget* parent);
 
