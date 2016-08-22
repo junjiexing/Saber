@@ -152,6 +152,10 @@ void DisasmView::paintEvent(QPaintEvent * e)
 				p.fillRect(rc, QColor(255, 170, 255));
 			}
 		}
+		else if (addr == dbgcore->excAddr())
+		{
+			p.fillRect(rc, QColor(72, 118, 255));
+		}
         else if (addr == g_highlightAddress)
         {
             p.fillRect(rc, Qt::lightGray);
