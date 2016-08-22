@@ -389,33 +389,6 @@ Register DebugCore::getAllRegisterState(task_t thread)
 	return reg;
 }
 
-void DebugCore::getAllSegment()
-{
-    auto base = findBaseAddress();
-    mach_header_64 header;
-    readMemory(base, &header, sizeof(header));
-    std::vector<uint8_t> buf(header.sizeofcmds);
-    readMemory(base + sizeof(header), buf.data(), buf.size());
-    auto p = buf.data();
-    for (int i = 0 ; i < header.ncmds; ++i)
-    {
-        load_command* cmd = (load_command*)p;
-        if (cmd->cmd == LC_SEGMENT_64)
-        {
-            segment_command_64* seg = (segment_command_64*)p;
-            Segment tmp;
-            tmp.segname = seg->segname;
-            tmp.vmaddr = seg->vmaddr;
-            tmp.vmsize = seg->vmsize;
-            tmp.fileoff = seg->fileoff;
-            tmp.filesize = seg->filesize;
-            m_segments.emplace_back(tmp);
-        }
-
-        p += cmd->cmdsize;
-    }
-}
-
 bool DebugCore::addBreakpoint(uint64_t address, bool enabled, bool isHardware, bool oneTime)
 {
     assert(!isHardware);    //TODO:
@@ -617,7 +590,6 @@ bool DebugCore::handleException(ExceptionInfo const&info)
     }
 
     log(str, LogType::Info);
-    m_currThread = m_excInfo.threadPort;
 
 	auto regInfo = getAllRegisterState(m_excInfo.threadPort);
     emit EventDispatcher::instance()->showRegisters(regInfo);
@@ -787,7 +759,7 @@ bool DebugCore::doContinueDebug()
 {
     x86_thread_state64_t state;
     mach_msg_type_number_t stateCount = x86_THREAD_STATE64_COUNT;
-    auto err = thread_get_state(m_currThread, x86_THREAD_STATE64, (thread_state_t)&state, &stateCount);
+    auto err = thread_get_state(m_excInfo.threadPort, x86_THREAD_STATE64, (thread_state_t)&state, &stateCount);
     if (err != KERN_SUCCESS)
     {
         log(QString("In DebugCore::stepIn, thread_get_state failed: %1").arg(mach_error_string(err)), LogType::Error);
@@ -817,7 +789,7 @@ bool DebugCore::doContinueDebug()
 
     log(QString("RFLAGS: 0x%1").arg(state.__rflags, 0, 16));
 
-    err = thread_set_state(m_currThread, x86_THREAD_STATE64, (thread_state_t)&state, stateCount);
+    err = thread_set_state(m_excInfo.threadPort, x86_THREAD_STATE64, (thread_state_t)&state, stateCount);
     if (err != KERN_SUCCESS)
     {
         log(QString("In DebugCore::stepIn, thread_set_state failed: %1").arg(mach_error_string(err)), LogType::Error);

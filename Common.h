@@ -43,5 +43,4 @@ struct ExceptionInfo
     mach_port_t taskPort;
     exception_type_t exceptionType;
     std::vector<mach_exception_data_type_t> exceptionData;
-    uint64_t exceptionAddr;
 };

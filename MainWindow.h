@@ -12,7 +12,6 @@
 #include <QtFlexManager.h>
 
 #include "Common.h"
-#include "RegisterModel.h"
 #include "OutputView.h"
 
 
@@ -38,7 +37,7 @@ private:
     void saveLayout();
     void loadLayout();
 
-    void onDockEidgetCreated(DockWidget* widget);
+    void onDockWidgetCreated(DockWidget *widget);
 
     void onFileOpen();
 
@@ -49,7 +48,6 @@ private:
 
     std::shared_ptr<DebugCore> m_debugCore = nullptr;
 
-    RegisterModel* m_registerModel;
     OutputModel* m_outputModel;
 };
 

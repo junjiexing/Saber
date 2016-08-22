@@ -7,6 +7,7 @@
 #include "BreakpointView.h"
 #include "qhexview.h"
 #include "MemoryMapView.h"
+#include "RegisterView.h"
 
 #include <QtDockWidget.h>
 #include <QtFlexWidget.h>
@@ -21,7 +22,7 @@ MainWindow::MainWindow(QWidget *parent)
 	setObjectName("MainWindow");
 	qApp->setProperty("window", QVariant::fromValue<QObject*>(this));
 
-	connect(FlexManager::instance(), &FlexManager::dockWidgetCreated, this, &MainWindow::onDockEidgetCreated);
+	connect(FlexManager::instance(), &FlexManager::dockWidgetCreated, this, &MainWindow::onDockWidgetCreated);
 
 	center = FlexManager::instance()->createFlexWidget(Flex::HybridView, this, Flex::widgetFlags(), "RootFlex");
 	setCentralWidget(center);
@@ -223,7 +224,6 @@ MainWindow::MainWindow(QWidget *parent)
 
 
 	//初始化model
-	m_registerModel = new RegisterModel(this);
 	m_outputModel = new OutputModel(this);
 	loadLayout();
 }
@@ -313,7 +313,7 @@ void MainWindow::loadLayout()
 	FlexManager::instance()->load(content,parents);
 }
 
-void MainWindow::onDockEidgetCreated(DockWidget *widget)
+void MainWindow::onDockWidgetCreated(DockWidget *widget)
 {
     auto const& title = widget->windowTitle();
 	if (title == "内存映射")
@@ -331,8 +331,9 @@ void MainWindow::onDockEidgetCreated(DockWidget *widget)
 	}
 	else if (title == "寄存器")
 	{
-		auto view = new QTreeView(widget);
-		view->setModel(m_registerModel);
+		auto view = new RegisterView(widget);
+		view->setDebugCore(m_debugCore);
+		view->updateContent();
 		widget->attachWidget(view);
 	}
     else if (title == "反汇编")
@@ -427,7 +428,6 @@ void MainWindow::onFileOpen()
 
 	m_debugCore = std::make_shared<DebugCore>();
     emit EventDispatcher::instance()->setDebugCore(m_debugCore);
-	connect(EventDispatcher::instance(), &EventDispatcher::showRegisters, m_registerModel, &RegisterModel::setRegister);
 
 	m_debugCore->debugNew(path, args);
 }

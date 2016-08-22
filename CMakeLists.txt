@@ -32,7 +32,6 @@ set(SOURCE_FILES
         DebugCore.cpp
         DisasmView.cpp
         libasmx64.cpp
-        RegisterModel.cpp
         mach_excServer.c
         mach_excUser.c
         TargetException.cpp
@@ -45,7 +44,7 @@ set(SOURCE_FILES
         BreakpointView.cpp
         BreakpointView.h
         utils.h
-        MemoryMapView.cpp MemoryMapView.h OutputView.cpp OutputView.h)
+        MemoryMapView.cpp MemoryMapView.h OutputView.cpp OutputView.h RegisterView.cpp RegisterView.h)
 
 include_directories(
         ${Qt5Widgets_INCLUDES}

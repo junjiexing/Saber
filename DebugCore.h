@@ -43,8 +43,6 @@ public:
     void getEntryAndDataAddr();
     Register getAllRegisterState(task_t thread);
 
-    void getAllSegment();
-
     using BreakpointPtr = std::shared_ptr<Breakpoint>;
 	using BreakpointWeakPtr = std::weak_ptr<Breakpoint>;
     bool addBreakpoint(uint64_t address, bool enabled = true, bool isHardware = false, bool oneTime = false);
@@ -57,6 +55,7 @@ public:
 	uint64_t entryAddr() { return m_entryAddr; }
 	uint64_t dataAddr() { return m_dataAddr; }
 	uint64_t stackAddr() { return m_stackAddr; }
+	ExceptionInfo const& excInfo() { return m_excInfo; }
 private:
     void debugLoop();
     bool handleException(ExceptionInfo const& info);
@@ -67,7 +66,6 @@ private:
 //    QString m_args;
 
     pid_t m_pid;
-	mach_port_t m_currThread = 0;
     mach_port_t m_task;
 	bool m_isAttach;
 
@@ -83,9 +81,10 @@ private:
     std::mutex m_continueMtx;
     std::condition_variable m_continueCV;
 
-	uint64_t m_excAddr = 0;
 	uint64_t m_entryAddr = 0;
 	uint64_t m_dataAddr = 0;
+
+	uint64_t m_excAddr = 0;
 	uint64_t m_stackAddr = 0;
 	ExceptionInfo m_excInfo;
 
