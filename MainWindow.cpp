@@ -5,9 +5,9 @@
 #include "global.h"
 #include "AttachProcessList.h"
 #include "BreakpointView.h"
-#include "qhexview.h"
 #include "MemoryMapView.h"
 #include "RegisterView.h"
+#include "MemoryView.h"
 
 #include <QtDockWidget.h>
 #include <QtFlexWidget.h>
@@ -352,30 +352,36 @@ void MainWindow::onDockWidgetCreated(DockWidget *widget)
 	}
 	else if (title == "内存")
 	{
-		auto view = new QHexView(this);
+		auto view = new MemoryView(this);
+		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setMemoryViewAddress, view, &MemoryView::setAddress);
 		view->setDebugCore(m_debugCore);
 		if (m_debugCore)
 		{
-			view->scrollTo(m_debugCore->dataAddr());
+			view->setAddress(m_debugCore->dataAddr());
 		}
-		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDebugCore, view, &QHexView::setDebugCore);
-		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setMemoryViewAddress, view, &QHexView::scrollTo);
 		widget->attachWidget(view);
 	}
 	else if (title == "栈")
 	{
-		auto view = new QHexView(this);
+//		auto view = new QHexView(this);
+//		view->setDebugCore(m_debugCore);
+//		if (m_debugCore)
+//		{
+//			view->scrollTo(m_debugCore->stackAddr());
+//		}
+//		view->setShowAsciiDump(false);
+//		view->setShowComments(false);
+//		view->setRowWidth(1);
+//		view->setWordWidth(8);
+//		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDebugCore, view, &QHexView::setDebugCore);
+//		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setStackAddress, view, &QHexView::scrollTo);
+//		widget->attachWidget(view);
+		auto view = new StackView(this);
 		view->setDebugCore(m_debugCore);
 		if (m_debugCore)
 		{
-			view->scrollTo(m_debugCore->stackAddr());
+			view->setAddress(m_debugCore->stackAddr());
 		}
-		view->setShowAsciiDump(false);
-		view->setShowComments(false);
-		view->setRowWidth(1);
-		view->setWordWidth(8);
-		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setDebugCore, view, &QHexView::setDebugCore);
-		QObject::connect(EventDispatcher::instance(), &EventDispatcher::setStackAddress, view, &QHexView::scrollTo);
 		widget->attachWidget(view);
 	}
 	else

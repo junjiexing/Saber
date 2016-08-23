@@ -26,8 +26,6 @@ set(SOURCE_FILES
         QtFlex5/QtFlexWidget.cpp
         resource.qrc
 
-        qhexview/qhexview.cpp
-
         Breakpoint.cpp
         DebugCore.cpp
         DisasmView.cpp
@@ -37,14 +35,14 @@ set(SOURCE_FILES
         TargetException.cpp
         TargetException.h
         EventDispatcher.cpp
-        EventDispatcher.h
         global.cpp
         AttachProcessList.cpp
         AttachProcessList.h
         BreakpointView.cpp
-        BreakpointView.h
-        utils.h
-        MemoryMapView.cpp MemoryMapView.h OutputView.cpp OutputView.h RegisterView.cpp RegisterView.h)
+        MemoryMapView.cpp
+        OutputView.cpp
+        RegisterView.cpp
+        MemoryView.cpp)
 
 include_directories(
         ${Qt5Widgets_INCLUDES}

@@ -15,9 +15,9 @@ class BreakpointView : public QTableWidget
 public:
 	BreakpointView(QWidget* parent);
 
-	void setDebugCore(std::shared_ptr<DebugCore> debugCore);
 public slots:
 	void updateContent();
+	void setDebugCore(std::shared_ptr<DebugCore> debugCore);
 
 protected:
 	void contextMenuEvent(QContextMenuEvent *event);

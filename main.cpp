@@ -29,6 +29,8 @@ int main(int argc, char *argv[])
     }
 
     QApplication a(argc, argv);
+    //IMPORTANT:非等宽字体会导致某些自绘文本控件的错位
+    QApplication::setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
     EventDispatcher::registerMetaType();
     QApplication::setStyle(new FlexStyle());
 
