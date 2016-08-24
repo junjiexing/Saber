@@ -3,6 +3,7 @@
 #include "EventDispatcher.h"
 #include "global.h"
 #include "utils.h"
+#include "libasmx64.h"
 
 #include <vector>
 
@@ -300,36 +301,60 @@ mach_vm_address_t DebugCore::findBaseAddress()
             return 0;
         }
         /* only one image with MH_EXECUTE filetype */
-        if ( (mh.magic == MH_MAGIC || mh.magic == MH_MAGIC_64) && mh.filetype == MH_EXECUTE)
+        if (mh.filetype == MH_EXECUTE)
         {
-            return addr;
+			if (mh.magic == MH_MAGIC)
+			{
+				log("调试目标是32位程序,暂不支持调试32位程序", LogType::Error);
+				return 0;
+			}
+
+			if (mh.magic == MH_MAGIC_64)
+			{
+				return addr;
+			}
         }
 
         addr += size;
     }
 }
 
-void DebugCore::getEntryAndDataAddr()
+bool DebugCore::getEntryAndDataAddr()
 {
     mach_vm_address_t aslrBase = findBaseAddress();
+	if (aslrBase == 0)
+	{
+		return false;
+	}
     mach_header header = {0};
-    //TODO:
-    readMemory(aslrBase, &header, sizeof(header));
+    if (!readMemory(aslrBase, &header, sizeof(header)))
+	{
+		return false;
+	}
 
     std::vector<char> cmdBuff(header.sizeofcmds);
     auto p = cmdBuff.data();
-    readMemory(aslrBase + sizeof(mach_header_64), p, cmdBuff.size());
+    if (!readMemory(aslrBase + sizeof(mach_header_64), p, cmdBuff.size()))
+	{
+		return false;
+	}
 
     for (int i = 0; i < header.ncmds; ++i)
     {
         load_command* cmd = (load_command*)p;
+		log(QString("cmd->cmd: %1").arg(cmd->cmd, 8, 16));
         if (cmd->cmd == LC_MAIN)
         {
             entry_point_command* epcmd = (entry_point_command*)p;
             m_entryAddr = aslrBase + epcmd->entryoff;
             log(QString("aslr base: 0x%1, entry: 0x%2").arg(QString::number(aslrBase, 16)).arg(QString::number(m_entryAddr, 16)), LogType::Info);
         }
-		if (cmd->cmd == LC_SEGMENT_64)
+		else if (cmd->cmd == LC_UNIXTHREAD || cmd->cmd == LC_THREAD)
+		{
+			//LC_UNIXTHREAD和LC_THREAD对应的结构体thread_commant不完整,这里直接通过偏移找到
+			m_entryAddr = *reinterpret_cast<uint64_t*>(p + 16 * 9);
+		}
+		else if (cmd->cmd == LC_SEGMENT_64)
 		{
 			segment_command_64* segcmd = (segment_command_64*)p;
 			if (std::strncmp(segcmd->segname, SEG_DATA, 6) == 0)
@@ -348,6 +373,8 @@ void DebugCore::getEntryAndDataAddr()
 		}
         p += cmd->cmdsize;
     }
+
+	return true;
 }
 
 Register DebugCore::getAllRegisterState(mach_port_t thread)
@@ -434,6 +461,8 @@ bool DebugCore::removeBreakpoint(DebugCore::BreakpointPtr bp)
 
 bool DebugCore::debugNew(const QString &path, const QString &args)
 {
+	//TODO: 检查文件是否是64位程序,不是则停止调试
+
     m_process = new DebugProcess; //TODO: 泄露怎么处理??
     QString command = path + " " + args;
 	m_process->start(command);
@@ -605,7 +634,12 @@ bool DebugCore::handleException(ExceptionInfo const&info)
                 {
                     //当子进程执行exec系列函数时会产生sigtrap信号
                     //TODO: 有多个子进程应该如何处理?
-					getEntryAndDataAddr();
+					if (!getEntryAndDataAddr())
+					{
+						log("获取入口点失败,正在停止调试", LogType::Error);
+						stop();
+						return false;
+					}
                     addOrEnableBreakpoint(m_entryAddr, false, true);
 					emit EventDispatcher::instance()->setMemoryViewAddress(m_dataAddr);
                 }
@@ -671,8 +705,20 @@ bool DebugCore::addOrEnableBreakpoint(uint64_t address, bool isHardware, bool on
 
 void DebugCore::continueDebug()
 {
-    m_stepIn = false;
+    m_continueType = ContinueType::ContinueRun;
     m_continueCV.notify_all();
+}
+
+void DebugCore::stepIn()
+{
+	m_continueType = ContinueType::ContinueStepIn;
+	m_continueCV.notify_all();
+}
+
+void DebugCore::stepOver()
+{
+	m_continueType = ContinueType::ContinueStepOver;
+	m_continueCV.notify_all();
 }
 
 void DebugCore::waitForContinue()
@@ -703,11 +749,13 @@ bool DebugCore::handleBreakpoint()
 			m_currentHitBP.reset();
 		}
 
-		if (!m_stepIn)
+		//如果不是单步但是触发了单步异常,说明是为了绕过断点
+		if (m_continueType == ContinueType::ContinueRun)
 		{
 			return doContinueDebug();
 		}
 
+		//正常的单步步入或者没有遇到call的单步步过
 		m_excAddr = state.__rip;
         waitForContinue();
 
@@ -742,19 +790,9 @@ bool DebugCore::handleBreakpoint()
 
     waitForContinue();
 
-	if (m_currentHitBP)
-	{
-		m_stepIn = true;
-	}
-
     return doContinueDebug();
 }
 
-void DebugCore::stepIn()
-{
-    m_stepIn = true;
-    m_continueCV.notify_all();
-}
 bool DebugCore::doContinueDebug()
 {
     x86_thread_state64_t state;
@@ -778,10 +816,35 @@ bool DebugCore::doContinueDebug()
 			//TODO: 询问用户是将异常传递给程序还是从断点指令下一条指令执行
 		}
 	}
-    if (m_stepIn || m_currentHitBP)
+	//FIXME: 在call上下断点,单步步过会变成单步步入
+    if (m_continueType == ContinueType::ContinueStepIn || m_currentHitBP)
     {
         state.__rflags |= (1 << 8);
     }
+	else if (m_continueType == ContinueType::ContinueStepOver)
+	{
+		uint8_t code[15];
+		if (!readMemory(state.__rip, code, 15))
+		{
+			//读取内存失败就当做单步步入处理
+			state.__rflags |= (1 << 8);
+		}
+		else
+		{
+			x64dis decoder;
+			x86dis_insn* insn = decoder.decode(code, 15, state.__rip);
+			if (insn->invalid || !std::strstr(insn->name, "call"))
+			{
+				state.__rflags |= (1 << 8);
+			}
+			else
+			{
+				addBreakpoint(state.__rip + insn->size, true, false, true);
+				state.__rflags &= ~(1 << 8);
+			}
+		}
+
+	}
     else
     {
         state.__rflags &= ~(1 << 8);

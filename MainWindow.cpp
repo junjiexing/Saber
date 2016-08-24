@@ -141,9 +141,16 @@ MainWindow::MainWindow(QWidget *parent)
 		}
 		emit EventDispatcher::instance()->refreshDisasmView();
 	}, QKeySequence(Qt::Key_F2)));
-	addAction("debug.stepOver", menu->addAction(QIcon(":/icon/Resources/step_over.png"), "单步步过", []
+	addAction("debug.stepOver", menu->addAction(QIcon(":/icon/Resources/step_over.png"), "单步步过", [this]
 	{
-
+		if (m_debugCore)
+		{
+			m_debugCore->stepOver();
+		}
+		else
+		{
+			QMessageBox::warning(this, "错误", "请先选择要调试的程序");
+		}
 	}, QKeySequence(Qt::Key_F8)));
 	addAction("debug.stepIn", menu->addAction(QIcon(":/icon/Resources/step_into.png"), "单步步入", [this]
 	{

@@ -22,6 +22,13 @@
 
 class DebugProcess;
 
+enum class ContinueType
+{
+	ContinueRun,
+	ContinueStepIn,
+	ContinueStepOver
+};
+
 class DebugCore : public std::enable_shared_from_this<DebugCore>
 {
 public:
@@ -38,9 +45,10 @@ public:
 	bool pause();
 	void stop();
     void continueDebug();
-    void stepIn();
+	void stepIn();
+	void stepOver();
     mach_vm_address_t findBaseAddress();
-    void getEntryAndDataAddr();
+    bool getEntryAndDataAddr();
     Register getAllRegisterState(mach_port_t thread);
 	bool setRegisterState(mach_port_t thread, RegisterType type, uint64_t value);
 
@@ -89,7 +97,7 @@ private:
 	uint64_t m_stackAddr = 0;
 	ExceptionInfo m_excInfo;
 
-	bool m_stepIn = false;
+	ContinueType m_continueType = ContinueType::ContinueRun;
 	bool doContinueDebug();
 
 	DebugProcess* m_process;
