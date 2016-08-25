@@ -3,5 +3,5 @@
 编译需要CMake 3.x 和Qt 5.6+
 
 ###使用到的其他项目:
-QtFlex5: https://github.com/JackyDing/QtFlex5
+QtFlex5: https://github.com/JackyDing/QtFlex5  
 HT Editor: https://github.com/sebastianbiallas/ht
