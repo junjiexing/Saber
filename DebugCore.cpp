@@ -75,7 +75,7 @@ std::vector<MemoryRegion> DebugCore::getMemoryMap()
         vm_region_submap_short_info_data_64_t info;
         mach_msg_type_number_t count = VM_REGION_SUBMAP_SHORT_INFO_COUNT_64;
 
-        kern_return_t kr = mach_vm_region_recurse(m_task, &start, &size,
+        kern_return_t kr = mach_vm_region_recurse(g_task, &start, &size,
                               &depth, (vm_region_recurse_info_t)&info, &count);
         if (kr != KERN_SUCCESS)
         {
@@ -119,7 +119,7 @@ bool DebugCore::findRegion(uint64_t address, uint64_t &start, uint64_t &size)
     vm_region_submap_short_info_data_64_t info;
     mach_msg_type_number_t count = VM_REGION_SUBMAP_SHORT_INFO_COUNT_64;
 
-    if (mach_vm_region_recurse(m_task, &_start, &_size,
+    if (mach_vm_region_recurse(g_task, &_start, &_size,
        &depth, (vm_region_recurse_info_t)&info, &count) != KERN_SUCCESS)
     {
         return false;
@@ -145,14 +145,14 @@ bool DebugCore::readMemory(mach_vm_address_t address, void* buffer, mach_vm_size
 			return;
 		}
 		log("restore");
-		kern_return_t kr = mach_vm_protect(m_task, address, size, 0, info.protection);
+		kern_return_t kr = mach_vm_protect(g_task, address, size, 0, info.protection);
 		if (kr != KERN_SUCCESS)
 		{
 			log(QString("mach_vm_protect还原内存属性失败：").append(mach_error_string(kr)), LogType::Warning);
 		}
 	});
 
-	kern_return_t kr = mach_vm_region_recurse(m_task, &regionAddress, &regionSize, &depth, (vm_region_recurse_info_t)&info, &count);
+	kern_return_t kr = mach_vm_region_recurse(g_task, &regionAddress, &regionSize, &depth, (vm_region_recurse_info_t)&info, &count);
 	if (kr != KERN_SUCCESS)
 	{
 		log(QString("读取内存失败，mach_vm_region_recurse：").append(mach_error_string(kr)), LogType::Warning);
@@ -162,7 +162,7 @@ bool DebugCore::readMemory(mach_vm_address_t address, void* buffer, mach_vm_size
 	//outputMessage(QString("region: %1").arg(regionAddress, 0, 16), MessageType::Info);
 	if ((info.protection & VM_PROT_READ) == 0)
 	{
-		kr = mach_vm_protect(m_task, address, size, 0, info.protection | VM_PROT_READ);
+		kr = mach_vm_protect(g_task, address, size, 0, info.protection | VM_PROT_READ);
 		if (kr != KERN_SUCCESS)
 		{
 			log(QString("读取内存失败，mach_vm_protect：").append(mach_error_string(kr)), LogType::Warning);
@@ -173,7 +173,7 @@ bool DebugCore::readMemory(mach_vm_address_t address, void* buffer, mach_vm_size
 
     /* read memory - vm_read_overwrite because we supply the buffer */
     mach_vm_size_t nread;
-    kr = mach_vm_read_overwrite(m_task, address, size, (mach_vm_address_t)buffer, &nread);
+    kr = mach_vm_read_overwrite(g_task, address, size, (mach_vm_address_t)buffer, &nread);
     if (kr != KERN_SUCCESS)
     {
         log(QString("mach_vm_read_overwrite failed at address: 0x%1 with error: %2").arg(address, 0, 16).arg(mach_error_string(kr)), LogType::Warning);
@@ -217,13 +217,13 @@ bool DebugCore::writeMemory(mach_vm_address_t address, const void *buffer, mach_
 			return;
 		}
 		log("restore");
-		kern_return_t kr = mach_vm_protect(m_task, address, size, 0, info.protection);
+		kern_return_t kr = mach_vm_protect(g_task, address, size, 0, info.protection);
 		if (kr != KERN_SUCCESS)
 		{
 			log(QString("mach_vm_protect还原内存属性失败：").append(mach_error_string(kr)), LogType::Warning);
 		}
 	});
-    kern_return_t kr = mach_vm_region_recurse(m_task, &regionAddress, &regionSize, &depth, (vm_region_recurse_info_t)&info, &count);
+    kern_return_t kr = mach_vm_region_recurse(g_task, &regionAddress, &regionSize, &depth, (vm_region_recurse_info_t)&info, &count);
     if (kr != KERN_SUCCESS)
     {
         log(QString("写入内存失败，mach_vm_region_recurse：").append(mach_error_string(kr)), LogType::Warning);
@@ -233,7 +233,7 @@ bool DebugCore::writeMemory(mach_vm_address_t address, const void *buffer, mach_
     //outputMessage(QString("region: %1").arg(regionAddress, 0, 16), MessageType::Info);
     if ((info.protection & VM_PROT_WRITE) == 0)
     {
-        kr = mach_vm_protect(m_task, address, size, 0, info.protection | VM_PROT_WRITE);
+        kr = mach_vm_protect(g_task, address, size, 0, info.protection | VM_PROT_WRITE);
         if (kr != KERN_SUCCESS)
         {
             log(QString("写入内存失败，mach_vm_protect：").append(mach_error_string(kr)), LogType::Warning);
@@ -243,7 +243,7 @@ bool DebugCore::writeMemory(mach_vm_address_t address, const void *buffer, mach_
 		needRestore = true;
     }
 
-    kr = mach_vm_write(m_task, address, (vm_offset_t)buffer, size);
+    kr = mach_vm_write(g_task, address, (vm_offset_t)buffer, size);
     if (kr != KERN_SUCCESS)
     {
         log(QString("mach_vm_write() failed: %1, address: 0x%2").arg(mach_error_string(kr)).arg(QString::number(address, 16)), LogType::Warning);
@@ -260,7 +260,7 @@ bool DebugCore::writeMemory(mach_vm_address_t address, const void *buffer, mach_
 		auto bpAddr = bp->address();
 		if (bpAddr >= address && bpAddr < address + size)
 		{
-			kr = mach_vm_write(m_task, bpAddr, (vm_offset_t)&Breakpoint::bpData, 1);
+			kr = mach_vm_write(g_task, bpAddr, (vm_offset_t)&Breakpoint::bpData, 1);
 			if (kr != KERN_SUCCESS)
 			{
 				//TODO: ?????????
@@ -287,7 +287,7 @@ mach_vm_address_t DebugCore::findBaseAddress()
         vm_region_submap_short_info_data_64_t info;
         mach_msg_type_number_t count = VM_REGION_SUBMAP_INFO_COUNT_64;
 
-        kern_return_t kr = mach_vm_region_recurse(m_task, &addr, &size, &depth, (vm_region_recurse_info_t)&info, &count);
+        kern_return_t kr = mach_vm_region_recurse(g_task, &addr, &size, &depth, (vm_region_recurse_info_t)&info, &count);
         if (kr != KERN_SUCCESS)
         {
             log(QString("查找基地址失败，vm_region_recurse_64：").append(mach_error_string(kr)), LogType::Error);
@@ -466,25 +466,28 @@ bool DebugCore::debugNew(const QString &path, const QString &args)
     m_process = new DebugProcess; //TODO: 泄露怎么处理??
     QString command = path + " " + args;
 	m_process->start(command);
-    m_pid = (pid_t)m_process->pid();
+    g_pid = (pid_t)m_process->pid();
 
-    if (m_pid <= 0)
+    if (g_pid <= 0)
     {
         log(QString("启动调试进程失败：%1").arg(m_process->errorString()), LogType::Error);
         return false;
     }
 
     //父进程执行
-    kern_return_t err = task_for_pid(mach_task_self(), m_pid, &m_task);
+    kern_return_t err = task_for_pid(mach_task_self(), g_pid, &g_task);
     if (err != KERN_SUCCESS)
     {
         log(QString("task_for_pid() error: %1 启动调试进程失败").arg(mach_error_string(err)), LogType::Error);
         return false;
     }
 
-    if (!m_targetException.setExceptionPort(m_task, std::bind(&DebugCore::handleException, this, std::placeholders::_1)))
+	log("4");
+
+	if (!TargetException::instance()
+		.setExceptionCallback(std::bind(&DebugCore::handleException, this, std::placeholders::_1)))
     {
-        log("setExceptionPort failed, 启动调试进程失败", LogType::Error);
+        log("setExceptionCallback failed, 启动调试进程失败", LogType::Error);
         return false;
     }
 
@@ -499,17 +502,18 @@ bool DebugCore::debugNew(const QString &path, const QString &args)
 
 bool DebugCore::attach(pid_t pid)
 {
-	m_pid = pid;
-	kern_return_t err = task_for_pid(mach_task_self(), m_pid, &m_task);
+	g_pid = pid;
+	kern_return_t err = task_for_pid(mach_task_self(), g_pid, &g_task);
 	if (err != KERN_SUCCESS)
 	{
 		log(QString("task_for_pid() error: %1 附加目标进城失败").arg(mach_error_string(err)), LogType::Error);
 		return false;
 	}
 
-	if (!m_targetException.setExceptionPort(m_task, std::bind(&DebugCore::handleException, this, std::placeholders::_1)))
+	if (!TargetException::instance()
+		.setExceptionCallback(std::bind(&DebugCore::handleException, this, std::placeholders::_1)))
 	{
-		log("setExceptionPort failed, 附加目标进城失败", LogType::Error);
+		log("setExceptionCallback failed, 附加目标进城失败", LogType::Error);
 		return false;
 	}
 
@@ -530,27 +534,27 @@ bool DebugCore::attach(pid_t pid)
 
 bool DebugCore::pause()
 {
-	return kill(m_pid, SIGINT) == 0;
+	return kill(g_pid, SIGINT) == 0;
 }
 
 void DebugCore::stop()
 {
-	if (m_pid == 0)
+	if (g_pid == 0)
 	{
 		return;
 	}
 
-	auto ret = kill(m_pid, SIGKILL);
+	auto ret = kill(g_pid, SIGKILL);
 	if (ret != 0)
 	{
 		log(QString("Stop debug SIGKILL failed: %1").arg(ret), LogType::Warning);
 	}
-	m_targetException.stop();
+	TargetException::instance().stop();
 
 	if (m_isAttach)
 	{
 		//TODO: 删除所有断点
-		if (ptrace(PT_DETACH, m_pid, (caddr_t)1, 0) != 0)
+		if (ptrace(PT_DETACH, g_pid, (caddr_t)1, 0) != 0)
 		{
 			log("Stop debug detach failed", LogType::Error);
 			return;
@@ -558,7 +562,7 @@ void DebugCore::stop()
 	}
 	else
 	{
-		ret = ptrace(PT_KILL, m_pid, 0, 0);
+		ret = ptrace(PT_KILL, g_pid, 0, 0);
 		if (ret != -1)
 		{
 			log(QString("Stop debug ptrace kill failed: %1").arg(ret), LogType::Error);
@@ -571,12 +575,12 @@ void DebugCore::stop()
 		m_debugThread.join();
 	}
 
-	m_pid = 0;
+	g_pid = 0;
 }
 
 void DebugCore::debugLoop()
 {
-    if (!m_targetException.run())
+    if (!TargetException::instance().run())
     {
         log("TargetException.run() failed.", LogType::Error);
     }
@@ -647,7 +651,7 @@ bool DebugCore::handleException(ExceptionInfo const&info)
 				{
 					waitForContinue();
 				}
-                ptrace(PT_CONTINUE, m_pid, (caddr_t)1, 0);
+                ptrace(PT_CONTINUE, g_pid, (caddr_t)1, 0);
             }
             else if (m_excInfo.exceptionData.size() >=1 && m_excInfo.exceptionData[0] == 1)
             {
@@ -859,7 +863,7 @@ bool DebugCore::doContinueDebug()
         return false;
     }
 
-    return ptrace(PT_CONTINUE, m_pid, (caddr_t)1, 0) == -1;
+    return ptrace(PT_CONTINUE, g_pid, (caddr_t)1, 0) == -1;
 }
 bool DebugCore::setRegisterState(mach_port_t thread, RegisterType type, uint64_t value)
 {

@@ -13,6 +13,16 @@ FIND_PACKAGE(Qt5Core REQUIRED)
 FIND_PACKAGE(Qt5Gui REQUIRED)
 FIND_PACKAGE(Qt5Widgets REQUIRED)
 
+set(generated_mach_interfaces
+        ${CMAKE_CURRENT_BINARY_DIR}/mach_exc.h
+        ${CMAKE_CURRENT_BINARY_DIR}/mach_excServer.c
+        ${CMAKE_CURRENT_BINARY_DIR}/mach_excUser.c
+        )
+add_custom_command(OUTPUT ${generated_mach_interfaces}
+        COMMAND mig ${CMAKE_CURRENT_SOURCE_DIR}/dbgnub-mig.defs
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dbgnub-mig.defs
+        )
+
 set(SOURCE_FILES
         main.cpp
         MainWindow.cpp
@@ -30,8 +40,6 @@ set(SOURCE_FILES
         DebugCore.cpp
         DisasmView.cpp
         libasmx64.cpp
-        mach_excServer.c
-        mach_excUser.c
         TargetException.cpp
         TargetException.h
         EventDispatcher.cpp
@@ -42,7 +50,8 @@ set(SOURCE_FILES
         MemoryMapView.cpp
         OutputView.cpp
         RegisterView.cpp
-        MemoryView.cpp)
+        MemoryView.cpp
+        ${generated_mach_interfaces})
 
 include_directories(
         ${Qt5Widgets_INCLUDES}

@@ -30,44 +30,40 @@ extern "C" kern_return_t catch_mach_exception_raise_state_identity(
     return KERN_FAILURE;
 }
 
+static bool isValidTask(task_t task)
+{
+	struct task_basic_info info;
+
+	mach_msg_type_number_t count = TASK_BASIC_INFO_COUNT;
+	return ::task_info (task, TASK_BASIC_INFO, (task_info_t)&info, &count) == KERN_SUCCESS;
+}
+
 
 extern "C" kern_return_t catch_mach_exception_raise(
         mach_port_t exc_port, mach_port_t thread_port,
         mach_port_t task_port, exception_type_t exc_type,
         mach_exception_data_t exc_data, mach_msg_type_number_t exc_data_count)
 {
-    auto self = TargetException::getSelfByTask(task_port);
-    if (!self)
-    {
-        log("TargetException::getSelfByTask failed", LogType::Error);
-        return KERN_FAILURE;
-    }
-
-    return self->onCatchMachExceptionRaise(exc_port, thread_port,
+	if (task_port != g_task && !isValidTask(g_task))
+	{
+		if (exc_type == EXC_SOFTWARE && exc_data_count == 2 && exc_data[0] == EXC_SOFT_SIGNAL && exc_data[1] == SIGTRAP)
+		{
+			g_task = task_port;
+		}
+	}
+    return TargetException::instance().onCatchMachExceptionRaise(exc_port, thread_port,
             task_port, exc_type, exc_data, exc_data_count);
 }
 
 
 TargetException::TargetException()
-    :m_task(0),m_stop(false)
+    :m_stop(false)
 {
 }
 
-bool TargetException::setExceptionPort(task_t task, ExceptionCallback callback)
+bool TargetException::setExceptionCallback(ExceptionCallback callback)
 {
-    {
-        std::lock_guard<std::mutex> _(taskToSelfMtx);
-        auto it = taskToSelf.find(m_task);
-        if (it != taskToSelf.end())
-        {
-            taskToSelf.erase(it);
-        }
-
-        m_task = task;
-        taskToSelf.emplace(task, this);
-    }
-
-    m_callback = std::move(callback);
+	m_callback = std::move(callback);
     auto kr = mach_port_allocate(mach_task_self(),MACH_PORT_RIGHT_RECEIVE,&m_exceptionPort);
     if (kr != KERN_SUCCESS)
     {
@@ -83,7 +79,7 @@ bool TargetException::setExceptionPort(task_t task, ExceptionCallback callback)
     }
 
     kr = task_get_exception_ports(
-            m_task,
+            g_task,
             EXC_MASK_ALL,
             m_oldExcPorts.masks,
             &m_oldExcPorts.count,
@@ -98,7 +94,7 @@ bool TargetException::setExceptionPort(task_t task, ExceptionCallback callback)
     }
 
     kr = task_set_exception_ports(
-            m_task, EXC_MASK_ALL, m_exceptionPort,
+            g_task, EXC_MASK_ALL, m_exceptionPort,
             EXCEPTION_DEFAULT | MACH_EXCEPTION_CODES,
             THREAD_STATE_NONE
     );
@@ -159,21 +155,6 @@ void TargetException::stop()
     mach_port_destroy(mach_task_self(), m_exceptionPort);
 }
 
-std::map<task_t, TargetException*> TargetException::taskToSelf;
-std::mutex TargetException::taskToSelfMtx;
-
-TargetException *TargetException::getSelfByTask(task_t task)
-{
-    std::lock_guard<std::mutex> _(taskToSelfMtx);
-    auto it = taskToSelf.find(task);
-    if (it != taskToSelf.end())
-    {
-        return it->second;
-    }
-
-    return nullptr;
-}
-
 kern_return_t
 TargetException::onCatchMachExceptionRaise(
         mach_port_t excPort, mach_port_t threadPort, mach_port_t taskPort,
@@ -194,12 +175,11 @@ TargetException::onCatchMachExceptionRaise(
         exceptionInfo.exceptionData.emplace_back(excData[i]);
     }
 
-
     /* you could just as easily put your code in here, I'm just doing this to
      point out the required code */
     if(!m_callback(exceptionInfo))
     {
-        return forwardException(threadPort, taskPort, excType, excData, excDataCount);
+		return forwardException(threadPort, taskPort, excType, excData, excDataCount);
     }
 
     return KERN_SUCCESS;
@@ -268,5 +248,11 @@ kern_return_t TargetException::forwardException(
     }
 
     return kr;
+}
+
+TargetException &TargetException::instance()
+{
+	static TargetException t;
+	return t;
 }
 

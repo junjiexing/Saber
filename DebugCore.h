@@ -74,8 +74,6 @@ private:
 //    QString m_path;
 //    QString m_args;
 
-    pid_t m_pid;
-    mach_port_t m_task;
 	bool m_isAttach;
 
 	std::thread m_debugThread;
@@ -83,8 +81,6 @@ private:
     std::vector<BreakpointPtr> m_breakpoints;
 
     std::vector<Segment> m_segments;
-
-    TargetException m_targetException;
 
     void waitForContinue();
     std::mutex m_continueMtx;

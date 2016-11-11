@@ -16,7 +16,7 @@ class TargetException
 {
 public:
     TargetException();
-    bool setExceptionPort(task_t task, ExceptionCallback callback);
+    bool setExceptionCallback(ExceptionCallback callback);
 
     bool run();
     void stop();
@@ -28,10 +28,9 @@ public:
     kern_return_t forwardException(mach_port_t thread,
                                    mach_port_t task, exception_type_t exception,
                                    mach_exception_data_t data, mach_msg_type_number_t dataCount);
-    static TargetException* getSelfByTask(task_t task);
+	static TargetException& instance();
 
 private:
-    task_t m_task;
     ExceptionCallback m_callback;
 
     std::atomic<bool> m_stop;
@@ -61,6 +60,4 @@ private:
     } m_rcvMsg;
 
 
-    static std::map<task_t, TargetException*> taskToSelf;
-    static std::mutex taskToSelfMtx;
 };
