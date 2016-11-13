@@ -163,7 +163,7 @@ TargetException::onCatchMachExceptionRaise(
 {
     if (!m_callback)
     {
-        return forwardException(threadPort, taskPort, excType, excData, excDataCount);
+        return KERN_FAILURE;
     }
 
     ExceptionInfo exceptionInfo;
@@ -179,75 +179,10 @@ TargetException::onCatchMachExceptionRaise(
      point out the required code */
     if(!m_callback(exceptionInfo))
     {
-		return forwardException(threadPort, taskPort, excType, excData, excDataCount);
+		return KERN_FAILURE;
     }
 
     return KERN_SUCCESS;
-}
-
-kern_return_t TargetException::forwardException(
-        mach_port_t thread, mach_port_t task, exception_type_t exception,
-        mach_exception_data_t data, mach_msg_type_number_t dataCount)
-{
-    thread_state_data_t threadState = {};
-    mach_msg_type_number_t threadStateCount = THREAD_STATE_MAX;
-
-    int i;
-    for(i=0; i < m_oldExcPorts.count; ++i)
-    {
-        if(m_oldExcPorts.masks[i] & (1 << exception))
-            break;
-    }
-
-    if(i == m_oldExcPorts.count)
-    {
-        log(QString("no old exception port can process the exception"), LogType::Error);
-        return KERN_FAILURE;
-    }
-
-    mach_port_t port = m_oldExcPorts.ports[i];
-    exception_behavior_t behavior = m_oldExcPorts.behaviors[i];
-    thread_state_flavor_t flavor = m_oldExcPorts.flavors[i];
-
-    //log(QString("exception index: %1, exception count: %2, port: %3, behavior: %4, flavor: %5").arg(i).arg(m_oldExcPorts.count).arg(port).arg(behavior).arg(flavor));
-
-    kern_return_t kr;
-    if(behavior != EXCEPTION_DEFAULT)
-    {
-        kr = thread_get_state(thread, flavor, threadState, &threadStateCount);
-        if(kr != KERN_SUCCESS)
-        {
-            log(QString("thread_get_state failde: %1").arg(mach_error_string(kr)), LogType::Error);
-            return kr;
-        }
-    }
-
-    switch(behavior)
-    {
-        case EXCEPTION_DEFAULT:
-            kr = mach_exception_raise(port, thread, task, exception, data, dataCount);
-            break;
-        case EXCEPTION_STATE:
-            kr = mach_exception_raise_state(port, exception, data,
-                    dataCount, &flavor, threadState, threadStateCount, threadState, &threadStateCount);
-            break;
-        case EXCEPTION_STATE_IDENTITY:
-            kr = mach_exception_raise_state_identity(port, thread, task, exception, data,
-                    dataCount, &flavor, threadState, threadStateCount, threadState, &threadStateCount);
-            break;
-        default:
-            log(QString("forwardException: unknown behavior: %1").arg(behavior), LogType::Info);
-            return KERN_FAILURE; /* make gcc happy */
-    }
-
-    if(behavior != EXCEPTION_DEFAULT)
-    {
-        kr = thread_set_state(thread, flavor, threadState, threadStateCount);
-        if(kr != KERN_SUCCESS)
-            log(QString("thread_set_state failed: %1").arg(mach_error_string(kr)), LogType::Error);
-    }
-
-    return kr;
 }
 
 TargetException &TargetException::instance()
