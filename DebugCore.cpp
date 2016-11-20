@@ -504,7 +504,7 @@ bool DebugCore::attach(pid_t pid)
 	kern_return_t err = task_for_pid(mach_task_self(), g_pid, &g_task);
 	if (err != KERN_SUCCESS)
 	{
-		log(QString("task_for_pid() error: %1 附加目标进城失败").arg(mach_error_string(err)), LogType::Error);
+		log(QString("task_for_pid() error: %1 附加目标进程失败").arg(mach_error_string(err)), LogType::Error);
 		return false;
 	}
 
