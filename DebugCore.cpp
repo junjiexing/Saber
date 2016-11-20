@@ -482,8 +482,6 @@ bool DebugCore::debugNew(const QString &path, const QString &args)
         return false;
     }
 
-	log("4");
-
 	if (!TargetException::instance()
 		.setExceptionCallback(std::bind(&DebugCore::handleException, this, std::placeholders::_1)))
     {

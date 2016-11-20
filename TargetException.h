@@ -25,9 +25,6 @@ public:
             mach_port_t excPort, mach_port_t threadPort,
             mach_port_t taskPort, exception_type_t excType,
             mach_exception_data_t excData, mach_msg_type_number_t excDataCount);
-    kern_return_t forwardException(mach_port_t thread,
-                                   mach_port_t task, exception_type_t exception,
-                                   mach_exception_data_t data, mach_msg_type_number_t dataCount);
 	static TargetException& instance();
 
 private:
